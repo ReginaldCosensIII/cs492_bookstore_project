@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Welcome, Admin {{ current_user.first_name }}!</h1>
+
+<p>Here you can manage users, books, and orders.</p>
+<!-- Add your admin-specific functionality here -->
+{% endblock %}

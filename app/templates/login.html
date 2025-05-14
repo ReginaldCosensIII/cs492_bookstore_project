@@ -1,0 +1,20 @@
+{% set show_nav = False %}
+{% extends 'base.html' %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Login</h2>
+<form method="post">
+    <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input name="email" type="email" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input name="password" type="password" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Login</button>
+    <a href="{{ url_for('auth.register') }}" class="btn btn-secondary ms-2">Register</a>
+</form>
+{% endblock %}

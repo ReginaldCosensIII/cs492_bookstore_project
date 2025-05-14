@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Register</h2>
+<form method="POST" class="row g-3">
+
+    <div class="col-md-6">
+        <label for="first_name" class="form-label">First Name</label>
+        <input type="text" class="form-control" name="first_name" required>
+    </div>
+    <div class="col-md-6">
+        <label for="last_name" class="form-label">Last Name</label>
+        <input type="text" class="form-control" name="last_name" required>
+    </div>
+
+    <div class="col-md-6">
+        <label for="email" class="form-label">Email</label>
+        <input type="email" class="form-control" name="email" required>
+    </div>
+    <div class="col-md-6">
+        <label for="phone_number" class="form-label">Phone Number</label>
+        <input type="text" class="form-control" name="phone_number">
+    </div>
+
+    <div class="col-md-6">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" name="password" required>
+    </div>
+
+    <div class="col-md-6">
+        <label for="role" class="form-label">Role</label>
+        <select class="form-select" name="role" required>
+            <option value="customer" selected>Customer</option>
+            <option value="admin">Admin</option>
+            <option value="employee">Employee</option>
+        </select>
+    </div>
+
+    <div class="col-12">
+        <label for="address_line1" class="form-label">Address Line 1</label>
+        <input type="text" class="form-control" name="address_line1">
+    </div>
+    <div class="col-12">
+        <label for="address_line2" class="form-label">Address Line 2</label>
+        <input type="text" class="form-control" name="address_line2">
+    </div>
+
+    <div class="col-md-4">
+        <label for="city" class="form-label">City</label>
+        <input type="text" class="form-control" name="city">
+    </div>
+    <div class="col-md-4">
+        <label for="state" class="form-label">State</label>
+        <input type="text" class="form-control" name="state">
+    </div>
+    <div class="col-md-4">
+        <label for="zip_code" class="form-label">Zip Code</label>
+        <input type="text" class="form-control" name="zip_code">
+    </div>
+
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary">Register</button>
+    </div>
+</form>
+{% endblock %}

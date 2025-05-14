@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Employee Dashboard{% endblock %}
+{% block show_nav %}
+    {% set show_nav = True %}  <!-- Hide nav only for the login page -->
+{% endblock %}
+{% block content %}
+<h1 class="mb-4">Welcome, Employee {{ current_user.first_name }}!</h1>
+
+<p>Here you can assist customers and manage inventory.</p>
+<!-- Add your employee-specific functionality here -->
+{% endblock %}
