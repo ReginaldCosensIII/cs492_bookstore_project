@@ -96,4 +96,4 @@ Dustin Keith,
 Edwin Zacarias,
 Lawrence Valdivia
 Computer Science Students @ CTU
-Passionate about building tools, teaching kids to code, and bringing ideas to life with Python & Flask.
+Passionate about building tools and bringing ideas to life!
