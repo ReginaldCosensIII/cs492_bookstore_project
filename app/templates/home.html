@@ -2,24 +2,103 @@
 
 {% block title %}Home - Bookstore{% endblock %}
 
-{% block content %}
-<h1 class="mb-4">Available Books</h1>
-
 {% if current_user.is_authenticated %}
     <p>Welcome, <strong>{{ current_user.first_name }}</strong>!</p>
 {% endif %}
 
+{% block content %}
+<h1 class="mb-3">Available Books</h2>
 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
     {% for book in books %}
+        {% set book_id = book.book_id | default('0') %}
         <div class="col">
             <div class="card h-100 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">{{ book.title }}</h5>
-                    <p class="card-text">by {{ book.author }}</p>
-                    <p class="card-text"><strong>${{ "%.2f"|format(book.price) }}</strong></p>
+                <div class="row g-0 h-100">
+                    <!-- Book image -->
+                    <div class="col-md-4 d-flex align-items-center justify-content-center p-2">
+                        <img src="{{ book.image_url or 'https://cdn.pixabay.com/photo/2014/04/02/14/06/book-306178_1280.png' }}"
+                             class="img-fluid rounded-start"
+                             alt="Book image"
+                             style="max-height: 150px; object-fit: contain;">
+                    </div>
+                    <!-- Book details -->
+                    <div class="col-md-8">
+                        <div class="card-body d-flex flex-column h-100">
+                            <div>
+                                <h5 class="card-title">{{ book.title }}</h5>
+                                <p class="card-text">by {{ book.author }}</p>
+                                <p class="card-text"><strong>${{ "%.2f"|format(book.price) }}</strong></p>
+                            </div>
+                            <!-- Controls -->
+                            <div class="mt-auto">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <button class="btn btn-primary btn-sm mt-2" onclick="openModal({{ book_id }})">
+                                        Book Details
+                                    </button>
+                                    <input type="number" id="quantity-{{ book_id }}" class="form-control form-control-sm w-25 mx-2" value="0" min="1">
+                                    <button class="btn btn-sm btn-success" onclick="addToCart({{ book_id }})">
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal -->
+        <div class="modal fade" id="bookModal{{ book_id }}" tabindex="-1" aria-labelledby="bookModalLabel{{ book_id }}" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="bookModalLabel{{ book_id }}">{{ book.title }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body d-flex">
+                        <img src="{{ book.image_url or 'https://cdn.pixabay.com/photo/2014/04/02/14/06/book-306178_1280.png' }}"
+                             class="me-3"
+                             style="width: 200px; height: auto;" alt="Book image">
+                        <div>
+                            <p><strong>Author:</strong> {{ book.author }}</p>
+                            <p><strong>Price:</strong> ${{ "%.2f"|format(book.price) }}</p>
+                            <p><strong>Description:</strong> {{ book.description or "No description available." }}</p>
+                            <p><strong>Reviews:</strong> Coming soon!</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary">Add to Cart</button>
+                    </div>
                 </div>
             </div>
         </div>
     {% endfor %}
 </div>
+
+<!-- JS functions -->
+<script>
+  function openModal(bookId) {
+    const modalElement = document.getElementById(`bookModal${bookId}`);
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    } else {
+      console.error("Modal not found for bookId:", bookId);
+    }
+  }
+
+  function addToCart(bookId) {
+    const quantityInput = document.getElementById(`quantity-${bookId}`);
+    const quantity = parseInt(quantityInput.value, 10);
+
+    if (isNaN(quantity) || quantity < 1) {
+      alert("Please enter a valid quantity.");
+      return;
+    }
+
+    // TODO: Replace this alert with an actual API call to add to cart
+    alert(`Added ${quantity} of book ID ${bookId} to cart.`);
+  }
+</script>
 {% endblock %}
