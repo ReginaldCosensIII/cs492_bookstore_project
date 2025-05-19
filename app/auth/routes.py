@@ -18,7 +18,7 @@ def register():
     if request.method == 'POST':
         first_name = request.form['first_name']
         last_name = request.form['last_name']
-        email = request.form['email']
+        email = request.form.get('email', '').strip().lower()
         phone_number = request.form.get('phone_number')
         password = generate_password_hash(request.form['password'])
         address_line1 = request.form.get('address_line1')
@@ -56,8 +56,8 @@ def register():
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form['email']
-        password_input = request.form['password']
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
 
         conn = get_db_connection()
         c = conn.cursor()
