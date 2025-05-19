@@ -57,7 +57,7 @@ def register():
 def login():
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '')
+        password_input = request.form.get('password', '')
 
         conn = get_db_connection()
         c = conn.cursor()
