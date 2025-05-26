@@ -1,0 +1,31 @@
+{# cs492_bookstore_project/app/templates/errors/404.html #}
+{% extends "base.html" %}
+
+{% block title %}Page Not Found (404){% endblock %}
+
+{% block content %}
+<div class="container text-center mt-5 pt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <h1 class="display-1 fw-bold text-primary">404</h1>
+            <h2 class="mb-4 display-5">Oops! Page Not Found.</h2>
+            <p class="lead mb-4">
+                {% if error_message %}
+                    {{ error_message }}
+                {% else %}
+                    We're sorry, but the page you are looking for does not exist, might have been moved, or is temporarily unavailable.
+                {% endif %}
+            </p>
+            <p>
+                <a href="{{ url_for('main.home') }}" class="btn btn-primary btn-lg mt-3">
+                    Go to Homepage
+                </a>
+            </p>
+            {# Use the passed debug_mode variable #}
+            {% if debug_mode and error_description %}
+                <p class="text-muted mt-4"><small>Debug information: {{ error_description }}</small></p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

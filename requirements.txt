@@ -1,5 +1,15 @@
-Flask==2.3.3
-Flask-Login==0.6.3
-gunicorn==21.2.0
-psycopg2-binary==2.9.9
-python-dotenv==1.0.1
+# cs492_bookstore_project/requirements.txt
+
+Flask>=2.3,<3.1
+psycopg2-binary>=2.9,<3.0
+python-dotenv>=0.21,<1.1
+Werkzeug>=2.3,<3.1  # Flask dependency, good to pin
+Jinja2>=3.1,<3.2     # Flask dependency
+Flask-Login>=0.6,<0.7
+gunicorn>=20.1,<22.0 # For production WSGI server
+markupsafe>=2.1,<2.2 # Dependency of Jinja2/Flask, good for XSS protection
+
+# Add other direct dependencies if you use them.
+# For example, if you add testing frameworks later:
+# pytest
+# pytest-flask

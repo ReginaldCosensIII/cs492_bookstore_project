@@ -1,0 +1,6 @@
+# Ensure shell scripts always use LF line endings
+*.sh    text eol=lf
+
+# You can add other rules here if needed, e.g.,
+# *.py   text eol=lf    # If you want to enforce LF for Python files too
+# * text=auto      # Default handling for other text files

@@ -4,64 +4,388 @@
 
 {% block content %}
 <h2 class="mb-4">Register</h2>
-<form method="POST" class="row g-3">
+
+{# --- Display Server-Side Errors --- #}
+{% if error %}
+<div class="alert alert-danger" role="alert">
+    <strong>Registration Error:</strong>
+    <ul>
+        {% for msg in error %}
+        <li>{{ msg }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{# --- End Server-Side Errors --- #}
+
+<form method="POST" class="row g-3" id="registrationForm" novalidate>
 
     <div class="col-md-6">
         <label for="first_name" class="form-label">First Name</label>
-        <input type="text" class="form-control" name="first_name" required>
+        <input type="text" class="form-control" id="first_name" name="first_name" value="{{ form_data.get('first_name', '') }}" required>
+        <div class="invalid-feedback">
+            Please enter your first name.
+        </div>
     </div>
     <div class="col-md-6">
         <label for="last_name" class="form-label">Last Name</label>
-        <input type="text" class="form-control" name="last_name" required>
+        <input type="text" class="form-control" id="last_name" name="last_name" value="{{ form_data.get('last_name', '') }}" required>
+        <div class="invalid-feedback">
+            Please enter your last name.
+        </div>
     </div>
 
     <div class="col-md-6">
         <label for="email" class="form-label">Email</label>
-        <input type="email" class="form-control" name="email" required>
+        <input type="email" class="form-control" id="email" name="email" value="{{ form_data.get('email', '') }}" required>
+        <div class="invalid-feedback">
+            Please enter a valid email address.
+        </div>
     </div>
     <div class="col-md-6">
         <label for="phone_number" class="form-label">Phone Number</label>
-        <input type="text" class="form-control" name="phone_number">
+        <input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ form_data.get('phone_number', '') }}" required>
+        <div class="invalid-feedback" id="phone_error">
+            Please enter your phone number.
+        </div>
     </div>
 
     <div class="col-md-6">
         <label for="password" class="form-label">Password</label>
-        <input type="password" class="form-control" name="password" required>
+        <input type="password" class="form-control" id="password" name="password" required>
+        <div class="invalid-feedback" id="password_error">
+            Password must be at least 8 characters long, include an uppercase letter, a number, and a special character.
+        </div>
+    </div>
+    <div class="col-md-6">
+        <label for="confirm_password" class="form-label">Confirm Password</label>
+        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+        <div class="invalid-feedback" id="confirm_password_error">
+            Passwords do not match.
+        </div>
     </div>
 
     <div class="col-md-6">
         <label for="role" class="form-label">Role</label>
-        <select class="form-select" name="role" required>
-            <option value="customer" selected>Customer</option>
-            <option value="admin">Admin</option>
-            <option value="employee">Employee</option>
+        <select class="form-select" id="role" name="role" required>
+            <option value="" disabled {% if not form_data.get('role') %}selected{% endif %}>Choose role...</option>
+            <option value="customer" {% if form_data.get('role') == 'customer' %}selected{% endif %}>Customer</option>
+            <option value="admin" {% if form_data.get('role') == 'admin' %}selected{% endif %}>Admin</option>
+            <option value="employee" {% if form_data.get('role') == 'employee' %}selected{% endif %}>Employee</option>
         </select>
+        <div class="invalid-feedback">
+            Please select a role.
+        </div>
     </div>
 
     <div class="col-12">
         <label for="address_line1" class="form-label">Address Line 1</label>
-        <input type="text" class="form-control" name="address_line1">
+        <input type="text" class="form-control" id="address_line1" name="address_line1" value="{{ form_data.get('address_line1', '') }}" required>
+        <div class="invalid-feedback">
+            Please enter your address.
+        </div>
     </div>
     <div class="col-12">
-        <label for="address_line2" class="form-label">Address Line 2</label>
-        <input type="text" class="form-control" name="address_line2">
+        <label for="address_line2" class="form-label">Address Line 2 <span class="text-muted">(Optional)</span></label>
+        <input type="text" class="form-control" id="address_line2" name="address_line2" value="{{ form_data.get('address_line2', '') }}">
     </div>
 
     <div class="col-md-4">
         <label for="city" class="form-label">City</label>
-        <input type="text" class="form-control" name="city">
+        <input type="text" class="form-control" id="city" name="city" value="{{ form_data.get('city', '') }}" required>
+        <div class="invalid-feedback">
+            Please enter your city.
+        </div>
     </div>
     <div class="col-md-4">
         <label for="state" class="form-label">State</label>
-        <input type="text" class="form-control" name="state">
+        <input type="text" class="form-control" id="state" name="state" value="{{ form_data.get('state', '') }}" required>
+        <div class="invalid-feedback" id="state_error">
+            Please enter your state.
+        </div>
     </div>
     <div class="col-md-4">
         <label for="zip_code" class="form-label">Zip Code</label>
-        <input type="text" class="form-control" name="zip_code">
+        <input type="text" class="form-control" id="zip_code" name="zip_code" value="{{ form_data.get('zip_code', '') }}" required>
+        <div class="invalid-feedback" id="zip_error">
+            Please enter your zip code.
+        </div>
     </div>
 
     <div class="col-12">
         <button type="submit" class="btn btn-primary">Register</button>
     </div>
 </form>
+
+<script>
+// --- JavaScript from the previous response ---
+// Make sure to include the full JavaScript block here.
+// I'm omitting it for brevity in this response, but you should have it.
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('registrationForm');
+    const firstNameInput = document.getElementById('first_name');
+    const lastNameInput = document.getElementById('last_name');
+    const emailInput = document.getElementById('email');
+    const phoneInput = document.getElementById('phone_number');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirm_password');
+    const roleInput = document.getElementById('role');
+    const address1Input = document.getElementById('address_line1');
+    // address_line2 is optional
+    const cityInput = document.getElementById('city');
+    const stateInput = document.getElementById('state');
+    const zipInput = document.getElementById('zip_code');
+
+
+    // Regular Expressions for validation
+    const phoneRegex = /^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/;
+    const zipRegex = /^\d{5}(?:[-\s]\d{4})?$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+    const stateRegex = /^[A-Za-z]{2}$/;
+
+    form.addEventListener('submit', function (event) {
+        let isValid = true;
+
+        // --- Helper function to set error ---
+        function setError(inputElement, errorElementIdOrSibling, message, isId = true) {
+            inputElement.classList.remove('is-valid');
+            inputElement.classList.add('is-invalid');
+            let errorElement;
+            if (isId) {
+                errorElement = document.getElementById(errorElementIdOrSibling);
+            } else {
+                errorElement = errorElementIdOrSibling; // It's the element itself (nextElementSibling)
+            }
+
+            if (errorElement) {
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+            }
+            isValid = false;
+        }
+
+        // --- Helper function to clear error ---
+        function clearError(inputElement, errorElementIdOrSibling, isId = true) {
+            inputElement.classList.remove('is-invalid');
+            inputElement.classList.add('is-valid');
+            let errorElement;
+            if (isId) {
+                errorElement = document.getElementById(errorElementIdOrSibling);
+            } else {
+                errorElement = errorElementIdOrSibling;
+            }
+            if (errorElement) {
+                errorElement.style.display = 'none';
+            }
+        }
+        
+        // --- Function to validate a required generic text field ---
+        function validateRequiredField(inputElement, errorMessage) {
+            const feedbackElement = inputElement.nextElementSibling;
+            if (!inputElement.value.trim()) {
+                setError(inputElement, feedbackElement, errorMessage, false);
+                return false;
+            } else {
+                clearError(inputElement, feedbackElement, false);
+                return true;
+            }
+        }
+
+        // --- Clear previous errors and valid states ---
+        const allInputs = [
+            firstNameInput, lastNameInput, emailInput, phoneInput,
+            passwordInput, confirmPasswordInput, roleInput, address1Input,
+            cityInput, stateInput, zipInput
+        ];
+
+        allInputs.forEach(input => {
+            input.classList.remove('is-invalid', 'is-valid');
+            const errorDiv = input.nextElementSibling;
+            if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+                errorDiv.style.display = 'none'; // Hide all feedback initially
+            }
+        });
+         // Reset specific custom error messages as well (if their default message is different)
+        document.getElementById('phone_error').textContent = 'Please enter your phone number.'; // Reset to default required message
+        document.getElementById('state_error').textContent = 'Please enter your state.';
+        document.getElementById('zip_error').textContent = 'Please enter your zip code.';
+        document.getElementById('password_error').textContent = 'Password must be at least 8 characters long, include an uppercase letter, a number, and a special character.';
+        document.getElementById('confirm_password_error').textContent = 'Passwords do not match.';
+
+
+        // --- Validate First Name (Required) ---
+        if (!validateRequiredField(firstNameInput, 'Please enter your first name.')) isValid = false;
+
+        // --- Validate Last Name (Required) ---
+        if (!validateRequiredField(lastNameInput, 'Please enter your last name.')) isValid = false;
+
+        // --- Validate Email (Required and Format) ---
+        if (!emailInput.value.trim()) {
+            setError(emailInput, emailInput.nextElementSibling, 'Please enter your email address.', false);
+            isValid = false;
+        } else if (!emailInput.checkValidity()) { // Basic HTML5 email validation
+            setError(emailInput, emailInput.nextElementSibling, 'Please enter a valid email address.', false);
+            isValid = false;
+        } else {
+            clearError(emailInput, emailInput.nextElementSibling, false);
+        }
+
+        // --- Validate Phone Number (Required and Format) ---
+        if (!phoneInput.value.trim()) {
+            setError(phoneInput, 'phone_error', 'Please enter your phone number.');
+        } else if (!phoneRegex.test(phoneInput.value.trim())) {
+            setError(phoneInput, 'phone_error', 'Please enter a valid phone number (e.g., XXX-XXX-XXXX or XXXXXXXXXX).');
+        } else {
+            clearError(phoneInput, 'phone_error');
+        }
+
+        // --- Validate Password (Required and Complexity) ---
+        if (!passwordInput.value) {
+            setError(passwordInput, 'password_error', 'Password is required.');
+        } else if (!passwordRegex.test(passwordInput.value)) {
+            setError(passwordInput, 'password_error', 'Password must be at least 8 characters, with 1 uppercase, 1 number, and 1 special character.');
+        } else {
+            clearError(passwordInput, 'password_error');
+        }
+
+        // --- Validate Confirm Password (Required and Match) ---
+        if (!confirmPasswordInput.value) {
+            setError(confirmPasswordInput, 'confirm_password_error', 'Please confirm your password.');
+        } else if (passwordInput.value && confirmPasswordInput.value !== passwordInput.value) {
+            setError(confirmPasswordInput, 'confirm_password_error', 'Passwords do not match.');
+        } else if (passwordInput.value) {
+            clearError(confirmPasswordInput, 'confirm_password_error');
+        }
+        
+        // --- Validate Role (Required) ---
+        if (!roleInput.value) { // Check if a value is selected
+            setError(roleInput, roleInput.nextElementSibling, 'Please select a role.', false);
+            isValid = false;
+        } else {
+            clearError(roleInput, roleInput.nextElementSibling, false);
+        }
+
+        // --- Validate Address Line 1 (Required) ---
+        if (!validateRequiredField(address1Input, 'Please enter your address.')) isValid = false;
+        
+        // --- Validate City (Required) ---
+        if (!validateRequiredField(cityInput, 'Please enter your city.')) isValid = false;
+
+        // --- Validate State (Required and Format) ---
+        if (!stateInput.value.trim()) {
+            setError(stateInput, 'state_error', 'Please enter your state.');
+        } else if (!stateRegex.test(stateInput.value.trim())) {
+            setError(stateInput, 'state_error', 'Please enter a 2-letter state code.');
+        } else {
+            clearError(stateInput, 'state_error');
+        }
+
+        // --- Validate Zip Code (Required and Format) ---
+        if (!zipInput.value.trim()) {
+            setError(zipInput, 'zip_error', 'Please enter your zip code.');
+        } else if (!zipRegex.test(zipInput.value.trim())) {
+            setError(zipInput, 'zip_error', 'Please enter a valid 5 or 9 digit zip code (e.g., 12345 or 12345-6789).');
+        } else {
+            clearError(zipInput, 'zip_error');
+        }
+
+
+        if (!isValid) {
+            event.preventDefault(); 
+            event.stopPropagation();
+        } else {
+            console.log('Form is valid and would be submitted.');
+        }
+    });
+
+    // --- Real-time validation setup ---
+    function setupRealTimeValidation(inputElement, validationFn) {
+        inputElement.addEventListener('input', validationFn);
+    }
+
+    // Real-time: First Name
+    setupRealTimeValidation(firstNameInput, () => validateRequiredField(firstNameInput, 'Please enter your first name.'));
+    // Real-time: Last Name
+    setupRealTimeValidation(lastNameInput, () => validateRequiredField(lastNameInput, 'Please enter your last name.'));
+    // Real-time: Email
+    setupRealTimeValidation(emailInput, () => {
+        if (!emailInput.value.trim()) {
+            setError(emailInput, emailInput.nextElementSibling, 'Please enter your email address.', false);
+        } else if (!emailInput.checkValidity()) {
+            setError(emailInput, emailInput.nextElementSibling, 'Please enter a valid email address.', false);
+        } else {
+            clearError(emailInput, emailInput.nextElementSibling, false);
+        }
+    });
+    // Real-time: Phone
+    setupRealTimeValidation(phoneInput, () => {
+        if (!phoneInput.value.trim()) {
+            setError(phoneInput, 'phone_error', 'Please enter your phone number.');
+        } else if (!phoneRegex.test(phoneInput.value.trim())) {
+            setError(phoneInput, 'phone_error', 'Please enter a valid phone number (e.g., XXX-XXX-XXXX or XXXXXXXXXX).');
+        } else {
+            clearError(phoneInput, 'phone_error');
+        }
+    });
+    // Real-time: Password
+    setupRealTimeValidation(passwordInput, () => {
+        if (!passwordInput.value) {
+            setError(passwordInput, 'password_error', 'Password is required.');
+        } else if (!passwordRegex.test(passwordInput.value)) {
+            setError(passwordInput, 'password_error', 'Password must be at least 8 characters, with 1 uppercase, 1 number, and 1 special character.');
+        } else {
+            clearError(passwordInput, 'password_error');
+        }
+        // Re-validate confirm password if password changes
+        if (confirmPasswordInput.value && passwordInput.value !== confirmPasswordInput.value) {
+            setError(confirmPasswordInput, 'confirm_password_error', 'Passwords do not match.');
+        } else if (confirmPasswordInput.value) {
+            clearError(confirmPasswordInput, 'confirm_password_error');
+        }
+    });
+    // Real-time: Confirm Password
+    setupRealTimeValidation(confirmPasswordInput, () => {
+        if (!confirmPasswordInput.value) {
+            setError(confirmPasswordInput, 'confirm_password_error', 'Please confirm your password.');
+        } else if (passwordInput.value !== confirmPasswordInput.value) {
+            setError(confirmPasswordInput, 'confirm_password_error', 'Passwords do not match.');
+        } else {
+            clearError(confirmPasswordInput, 'confirm_password_error');
+        }
+    });
+    // Real-time: Address Line 1
+    setupRealTimeValidation(address1Input, () => validateRequiredField(address1Input, 'Please enter your address.'));
+    // Real-time: City
+    setupRealTimeValidation(cityInput, () => validateRequiredField(cityInput, 'Please enter your city.'));
+    // Real-time: State
+    setupRealTimeValidation(stateInput, () => {
+        if (!stateInput.value.trim()) {
+            setError(stateInput, 'state_error', 'Please enter your state.');
+        } else if (!stateRegex.test(stateInput.value.trim())) {
+            setError(stateInput, 'state_error', 'Please enter a 2-letter state code.');
+        } else {
+            clearError(stateInput, 'state_error');
+        }
+    });
+    // Real-time: Zip Code
+    setupRealTimeValidation(zipInput, () => {
+        if (!zipInput.value.trim()) {
+            setError(zipInput, 'zip_error', 'Please enter your zip code.');
+        } else if (!zipRegex.test(zipInput.value.trim())) {
+            setError(zipInput, 'zip_error', 'Please enter a valid 5 or 9 digit zip code (e.g., 12345 or 12345-6789).');
+        } else {
+            clearError(zipInput, 'zip_error');
+        }
+    });
+    // Real-time: Role (on change)
+    roleInput.addEventListener('change', () => {
+        if (!roleInput.value) {
+            setError(roleInput, roleInput.nextElementSibling, 'Please select a role.', false);
+        } else {
+            clearError(roleInput, roleInput.nextElementSibling, false);
+        }
+    });
+
+});
+</script>
 {% endblock %}

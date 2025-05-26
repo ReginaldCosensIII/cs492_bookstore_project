@@ -1,0 +1,102 @@
+{# cs492_bookstore_project/app/templates/order_confirmation.html #}
+{% extends "base.html" %}
+
+{% block title %}Order Confirmed - #{{ order.order_id if order else 'N/A' }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="py-5 text-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" fill="currentColor" class="bi bi-patch-check-fill text-success mb-3" viewBox="0 0 16 16">
+            <path d="M10.067.87a2.89 2.89 0 0 0-4.134 0l-.622.638-.89-.011a2.89 2.89 0 0 0-2.924 2.924l.01.89-.636.622a2.89 2.89 0 0 0 0 4.134l.637.622-.011.89a2.89 2.89 0 0 0 2.924 2.924l.89-.01.622.636a2.89 2.89 0 0 0 4.134 0l.622-.637.89.011a2.89 2.89 0 0 0 2.924-2.924l-.01-.89.636-.622a2.89 2.89 0 0 0 0-4.134l-.637-.622.011-.89a2.89 2.89 0 0 0-2.924-2.924l-.89.01-.622-.636zm.287 5.984-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708.708z"/>
+        </svg>
+        {% if order %}
+            <h2 class="display-5">Thank You for Your Order!</h2>
+            <p class="lead">Your order <strong>#{{ order.order_id }}</strong> has been placed successfully.</p>
+            <p>Order Date: {{ order.order_date.strftime('%B %d, %Y at %I:%M %p UTC') if order.order_date else 'N/A' }}</p>
+            <p>Status: <span class="badge 
+                {% if order.status == 'Pending Payment' %}bg-info
+                {% elif order.status == 'Awaiting Fulfillment' %}bg-warning
+                {% elif order.status == 'On Hold' %}bg-secondary
+                {% elif order.status == 'Payment Failed' %}bg-danger
+                {% elif order.status == 'Refunded' %}bg-secondary
+                {% elif order.status == 'Partially Refunded' %}bg-secondary
+                {% elif order.status == 'Awaiting Shipment' %}bg-warning
+                {% elif order.status == 'Awaiting Pickup' %}bg-warning
+                {% elif order.status == 'Ready for Pickup' %}bg-success
+                {% elif order.status == 'Completed' %}bg-success
+                {% elif order.status == 'Processing' %}bg-info
+                {% elif order.status == 'Shipped' %}bg-primary
+                {% elif order.status == 'Delivered' %}bg-success
+                {% elif order.status == 'Cancelled' %}bg-danger
+                {% else %}bg-secondary
+                {% endif %}
+                ">{{ order.status }}</span></p>
+            {# *** CORRECTED PRICE FORMATTING *** #}
+            <p>Total Amount: <strong>${{ "%.2f"|format(order.total_amount) }}</strong></p>
+        {% else %}
+            <h2 class="display-5 text-warning">Order Confirmation Issue</h2>
+            <p class="lead">There was an issue retrieving your order details. Please check your email or contact support.</p>
+        {% endif %}
+    </div>
+
+    {% if order %}
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h4>Order Summary:</h4>
+            <ul class="list-group mb-3 shadow-sm">
+                {% for item in order.items %}
+                <li class="list-group-item d-flex justify-content-between lh-sm">
+                    <div class="d-flex align-items-center">
+                        {% if item.book_image_url %}
+                        <img src="{{ item.book_image_url }}" alt="{{ item.book_title.title() if item.book_title else 'Book'}}" class="img-fluid me-3" style="width: 50px; height: auto; object-fit: contain;">
+                        {% endif %}
+                        <div>
+                            <h6 class="my-0">{{ item.book_title.title() if item.book_title else 'Book Title N/A' }}</h6>
+                            {# *** CORRECTED PRICE FORMATTING *** #}
+                            <small class="text-muted">Qty: {{ item.quantity }} &times; ${{ "%.2f"|format(item.unit_price_at_purchase) }}</small>
+                        </div>
+                    </div>
+                    {# *** CORRECTED PRICE FORMATTING *** #}
+                    <span class="text-muted fw-bold">${{ "%.2f"|format(item.quantity * item.unit_price_at_purchase) }}</span>
+                </li>
+                {% else %}
+                <li class="list-group-item">No items found in this order.</li>
+                {% endfor %}
+                <li class="list-group-item d-flex justify-content-between bg-light">
+                    <span><strong>Order Total</strong></span>
+                    {# *** CORRECTED PRICE FORMATTING *** #}
+                    <strong>${{ "%.2f"|format(order.total_amount) }}</strong>
+                </li>
+            </ul>
+
+            <h5 class="mt-4">Shipping To:</h5>
+            <address class="p-3 border rounded bg-light">
+                {% if order.user_id and current_user.is_authenticated and order.user_id == current_user.id %}
+                    <strong>{{ current_user.first_name.title() }} {{ current_user.last_name.title() }}</strong><br>
+                    {{ current_user.email }}<br>
+                {% elif order.guest_email %}
+                    <strong>Guest Order</strong><br>
+                    Email: {{ order.guest_email }}<br> 
+                {% else %}
+                    Shipping Contact Information Not Available<br>
+                {% endif %}
+                {{ order.shipping_address_line1 }}<br>
+                {% if order.shipping_address_line2 %}{{ order.shipping_address_line2 }}<br>{% endif %}
+                {{ order.shipping_city }}, {{ order.shipping_state }} {{ order.shipping_zip_code }}
+            </address>
+            
+            <hr class="my-4">
+            <p class="text-center">
+                A confirmation email has been sent to your provided email address. 
+                {% if current_user.is_authenticated %}
+                You can also view your order history in <a href="{{ url_for('main.profile_page') }}">your profile</a>.
+                {% endif %}
+            </p>
+            <div class="text-center mt-4">
+                <a href="{{ url_for('main.home') }}" class="btn btn-primary btn-lg">Continue Shopping</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,132 @@
+{# cs492_bookstore_project/app/templates/checkout.html #}
+{% extends "base.html" %}
+{% block title %}Checkout - BookNook{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4 text-center">Checkout</h1>
+    <div class="row">
+        <div class="col-md-5 col-lg-4 order-md-last">
+            <h4 class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-primary">Your Cart</span>
+                <span class="badge bg-primary rounded-pill">{{ cart_items|length }}</span>
+            </h4>
+            <ul class="list-group mb-3">
+                {% for item in cart_items %}
+                <li class="list-group-item d-flex justify-content-between lh-sm">
+                    <div>
+                        <h6 class="my-0">{{ item.title.title() }} (x{{ item.quantity }})</h6>
+                        <small class="text-muted">Unit Price: ${{ "%.2f"|format(item.unit_price) }}</small>
+                    </div>
+                    <span class="text-muted">${{ "%.2f"|format(item.total_price) }}</span>
+                </li>
+                {% endfor %}
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>Total (USD)</span>
+                    <strong>${{ "%.2f"|format(cart_total) }}</strong>
+                </li>
+            </ul>
+        </div>
+
+        <div class="col-md-7 col-lg-8">
+            <h4 class="mb-3">Shipping & Contact Information</h4>
+            
+            {% if not current_user.is_authenticated %}
+            <div class="alert alert-info">
+                You are checking out as a guest. 
+                <a href="{{ url_for('auth.login', next=url_for('cart.checkout_page_route')) }}">Log In</a> or 
+                <a href="{{ url_for('auth.register', next=url_for('cart.checkout_page_route')) }}">Register</a> for a faster checkout next time and to save your order history.
+            </div>
+            {% endif %}
+
+            <form action="{{ url_for('cart.place_order_route') }}" method="POST" class="needs-validation" novalidate>
+                {# CSRF token placeholder #}
+
+                {% if not current_user.is_authenticated %}
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label for="guest_email" class="form-label">Email Address <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" id="guest_email" name="guest_email" placeholder="you@example.com" value="{{ guest_email or '' }}" required>
+                        {% if errors and errors.guest_email %}
+                            <div class="invalid-feedback d-block">{{ errors.guest_email }}</div>
+                        {% else %}
+                            <div class="invalid-feedback">Valid email is required for guest checkout.</div>
+                        {% endif %}
+                    </div>
+                     {# Optional: Add First Name / Last Name fields for Guest if not part of shipping #}
+                </div>
+                <hr class="my-4">
+                {% endif %}
+
+                <h5 class="mb-3">Shipping Address</h5>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label for="shipping_address_line1" class="form-label">Address <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="shipping_address_line1" name="shipping_address_line1" placeholder="1234 Main St" value="{{ shipping_address.address_line1 or '' }}" required>
+                        {% if errors and errors.shipping_address_line1 %}
+                            <div class="invalid-feedback d-block">{{ errors.shipping_address_line1 }}</div>
+                        {% else %}
+                            <div class="invalid-feedback">Please enter your shipping address.</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-12">
+                        <label for="shipping_address_line2" class="form-label">Address 2 <span class="text-muted">(Optional)</span></label>
+                        <input type="text" class="form-control" id="shipping_address_line2" name="shipping_address_line2" placeholder="Apartment or suite" value="{{ shipping_address.address_line2 or '' }}">
+                    </div>
+                    <div class="col-md-5">
+                        <label for="shipping_city" class="form-label">City <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="shipping_city" name="shipping_city" value="{{ shipping_address.city or '' }}" required>
+                         {% if errors and errors.shipping_city %}
+                            <div class="invalid-feedback d-block">{{ errors.shipping_city }}</div>
+                        {% else %}
+                            <div class="invalid-feedback">City is required.</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="shipping_state" class="form-label">State <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="shipping_state" name="shipping_state" value="{{ shipping_address.state or '' }}" required maxlength="20"> {# Increased maxlength from 2 #}
+                         {% if errors and errors.shipping_state %}
+                            <div class="invalid-feedback d-block">{{ errors.shipping_state }}</div>
+                        {% else %}
+                            <div class="invalid-feedback">State is required.</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="shipping_zip_code" class="form-label">Zip <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="shipping_zip_code" name="shipping_zip_code" value="{{ shipping_address.zip_code or '' }}" required>
+                        {% if errors and errors.shipping_zip_code %}
+                            <div class="invalid-feedback d-block">{{ errors.shipping_zip_code }}</div>
+                        {% else %}
+                            <div class="invalid-feedback">Zip code required.</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <hr class="my-4">
+                <h4 class="mb-3">Payment</h4>
+                <p class="text-muted"><em>Payment gateway integration coming soon. Click "Place Your Order" to simulate order completion.</em></p>
+                <hr class="my-4">
+                <button class="w-100 btn btn-primary btn-lg" type="submit">Place Your Order</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{# ... (Bootstrap validation script from response #47) ... #}
+<script>
+(function () {
+  'use strict'
+  var forms = document.querySelectorAll('.needs-validation')
+  Array.prototype.slice.call(forms)
+    .forEach(function (form) {
+      form.addEventListener('submit', function (event) {
+        if (!form.checkValidity()) {
+          event.preventDefault()
+          event.stopPropagation()
+        }
+        form.classList.add('was-validated')
+      }, false)
+    })
+})()
+</script>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Internal Server Error (500){% endblock %}
+
+{% block content %}
+<div class="container text-center mt-5 pt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <h1 class="display-1 fw-bold text-danger">500</h1>
+            <h2 class="mb-4 display-5">Internal Server Error</h2>
+            <p class="lead mb-4">
+                {% if error_message %}
+                    {{ error_message }}
+                {% else %}
+                    We're sorry, something went wrong on our end. We are working to fix it.
+                {% endif %}
+            </p>
+            <p>
+                Please try again later, or return to the homepage.
+            </p>
+            <a href="{{ url_for('main.home') }}" class="btn btn-primary btn-lg mt-3">Go to Homepage</a>
+            {% if debug_mode and error and hasattr(error, 'original_exception') and error.original_exception %}
+                <p class="text-muted mt-4"><small>Debug information: {{ error.original_exception }}</small></p>
+            {% elif debug_mode and error %}
+                 <p class="text-muted mt-4"><small>Debug information: {{ error }}</small></p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

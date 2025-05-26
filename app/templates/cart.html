@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Your Shopping Cart - BookNook{% endblock %}
+
+{% block content %}
+<div class="container mt-4" id="cart-page-main-container-js"> {# Identifier for cart_handler.js to know it's on cart page #}
+    <h1 class="mb-4">Your Shopping Cart</h1>
+
+    <div id="empty-cart-message-js" style="display: {% if is_empty %}block{% else %}none{% endif %};">
+        <div class="alert alert-info text-center" role="alert">
+            <h4 class="alert-heading">Your Cart is Empty!</h4>
+            <p>Looks like you haven't added any books to your cart yet.</p>
+            <hr>
+            <p class="mb-0">
+                <a href="{{ url_for('main.home') }}" class="btn btn-primary">Continue Shopping</a>
+            </p>
+        </div>
+    </div>
+
+    <div id="cart-content-container-js" style="display: {% if not is_empty %}block{% else %}none{% endif %};">
+        <div class="row">
+            <div class="col-lg-8" id="cart-items-container-js"> {# Container for individual item cards/rows #}
+                {% for item in cart_items %}
+                <div class="card mb-3 shadow-sm cart-item-row-js" id="cart-item-row-{{ item.book_id }}"> {# Unique ID for the item row #}
+                    <div class="row g-0">
+                        <div class="col-md-2 col-sm-3 d-flex align-items-center justify-content-center p-2">
+                            <img src="{{ item.image_url }}" class="img-fluid rounded" alt="{{ item.title.title() }}" style="max-height: 120px; object-fit: contain;">
+                        </div>
+                        <div class="col-md-5 col-sm-9">
+                            <div class="card-body py-2 px-3">
+                                <h5 class="card-title mb-1 fs-6"><a href="#" class="text-decoration-none">{{ item.title.title() }}</a></h5>
+                                <p class="card-text mb-1"><small class="text-muted">Unit Price: ${{ "%.2f"|format(item.unit_price) }}</small></p>
+                                <div class="d-flex align-items-center mt-2">
+                                    <label for="cart-quantity-{{ item.book_id }}" class="form-label me-2 small mb-0 visually-hidden">Qty:</label>
+                                    <input type="number" 
+                                           id="cart-quantity-{{ item.book_id }}" 
+                                           class="form-control form-control-sm quantity-input me-2" 
+                                           value="{{ item.quantity }}" 
+                                           min="0" {# Allow 0 to trigger removal via update #}
+                                           max="{{ item.stock_quantity }}" 
+                                           data-book-id="{{ item.book_id }}"
+                                           aria-label="Quantity for {{ item.title.title() }}"
+                                           style="width: 70px;">
+                                    <button class="btn btn-outline-secondary btn-sm update-quantity-btn-js" type="button" data-book-id="{{ item.book_id }}">Update</button>
+                                </div>
+                                {% if item.quantity > item.stock_quantity %}
+                                    <small class="text-danger d-block mt-1">Only {{ item.stock_quantity }} in stock. Quantity has been adjusted.</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 d-flex align-items-center justify-content-md-end justify-content-start px-3 mt-2 mt-md-0"> 
+                             <p class="card-text fs-5 fw-bold mb-0" id="item-total-price-{{ item.book_id }}">${{ "%.2f"|format(item.total_price) }}</p>
+                        </div>
+                        <div class="col-md-2 col-sm-6 d-flex align-items-center justify-content-md-center justify-content-end p-2 px-3 mt-2 mt-md-0"> 
+                            <button class="btn btn-outline-danger btn-sm remove-from-cart-btn-js" type="button" data-book-id="{{ item.book_id }}" aria-label="Remove {{ item.title.title() }} from cart">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3" viewBox="0 0 16 16">
+                                  <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5ZM11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H2.506a.58.58 0 0 0-.01 0H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1h-.995a.59.59 0 0 0-.01 0H11Zm1.958 1-.846 10.58a1 1 0 0 1-.997.92H4.885a1 1 0 0 1-.997-.92L3.042 3.5h9.916Zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47ZM8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"/>
+                                </svg> Remove
+                            </button>
+                        </div>
+                         <div class="col-12"><div id="action-message-cart-{{ item.book_id }}" class="action-message small px-3"></div></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="col-lg-4 mt-4 mt-lg-0" id="cart-summary-js">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Cart Summary</h5>
+                        <hr>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Subtotal:</span>
+                            <strong id="cart-subtotal-value-js">${{ "%.2f"|format(cart_total) }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Shipping:</span>
+                            <strong>TBD</strong> {# Placeholder #}
+                        </div>
+                         <div class="d-flex justify-content-between mb-3">
+                            <span>Taxes:</span>
+                            <strong>TBD</strong> {# Placeholder #}
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between fw-bold fs-5">
+                            <span>Total:</span>
+                            <strong id="cart-grand-total-value-js">${{ "%.2f"|format(cart_total) }}</strong>
+                        </div>
+                        <div class="d-grid gap-2 mt-4">
+                            <a href="{{ url_for('cart.checkout_page_route') }}" class="btn btn-primary btn-lg {% if is_empty %}disabled{% endif %}">Proceed to Checkout</a>
+                            <a href="{{ url_for('main.home') }}" class="btn btn-outline-secondary">Continue Shopping</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{# cart_handler.js is loaded globally via base.html.
+   It contains event listeners that will attach if 'cart-page-main-container-js' is found.
+   The functions updateCartItemQuantityOnPage and removeCartItemFromPage are in cart_handler.js
+#}
+<script>
+    // This is for data that might be specific to the cart page load,
+    // but most interactions are now handled by event delegation in cart_handler.js.
+    // For example, storing initial quantities if needed for complex revert logic (not currently used).
+    window.initialCartData = {
+    {% for item in cart_items %}
+        "{{ item.book_id | string }}": {
+            quantity: {{ item.quantity }},
+            unit_price: {{ item.unit_price | tojson | safe }} // Store as string if it's Decimal from Python
+        }
+        {% if not loop.last %},{% endif %}
+    {% endfor %}
+    };
+</script>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Order Details - #{{ order.order_id }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Order Details</h1>
+        <a href="{{ url_for('main.profile_page') }}" class="btn btn-outline-secondary">&laquo; Back to Profile / Orders</a>
+    </div>
+    
+    {% if order %}
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <div class="row">
+                <div class="col-md-4"><strong>Order ID:</strong> #{{ order.order_id }}</div>
+                <div class="col-md-4 text-md-center"><strong>Date:</strong> {{ order.order_date.strftime('%B %d, %Y, %I:%M %p UTC') if order.order_date else 'N/A' }}</div>
+                <div class="col-md-4 text-md-end"><strong>Status:</strong> <span class="badge bg-primary">{{ order.status }}</span></div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-7">
+                    <h5 class="mb-3">Items Ordered:</h5>
+                    {% if order.items %}
+                        <ul class="list-group list-group-flush">
+                        {% for item in order.items %}
+                            <li class="list-group-item ps-0">
+                                <div class="row align-items-center">
+                                    <div class="col-2">
+                                        <img src="{{ item.book_image_url or url_for('static', filename='images/logo_placeholder.png') }}" alt="{{ item.book_title.title() if item.book_title else 'Book'}}" class="img-fluid" style="max-height: 75px;">
+                                    </div>
+                                    <div class="col-6">
+                                        <h6 class="my-0">{{ item.book_title.title() if item.book_title else 'Book Title Not Available' }}</h6>
+                                        <small class="text-muted">Unit Price: ${{ "%.2f"|format(item.unit_price_at_purchase) }} | Qty: {{ item.quantity }}</small>
+                                    </div>
+                                    <div class="col-4 text-end">
+                                        <span class="text-muted">${{ "%.2f"|format(item.quantity * item.unit_price_at_purchase) }}</span>
+                                    </div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No items found for this order.</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-5 border-start ps-md-4">
+                    <h5 class="mb-3">Order Summary</h5>
+                    <ul class="list-group list-group-flush">
+                        {# Placeholder for subtotal, shipping, tax if calculated separately #}
+                        <li class="list-group-item d-flex justify-content-between ps-0">
+                            <span>Subtotal</span>
+                            <span>${{ "%.2f"|format(order.total_amount) }}</span>
+                        </li>
+                         <li class="list-group-item d-flex justify-content-between ps-0">
+                            <span>Shipping</span>
+                            <span>$0.00 (Placeholder)</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between ps-0 fw-bold">
+                            <span>Total</span>
+                            <strong>${{ "%.2f"|format(order.total_amount) }}</strong>
+                        </li>
+                    </ul>
+
+                    <h5 class="mt-4 mb-3">Shipping Address</h5>
+                    <address>
+                        <strong>{{ current_user.first_name.title() }} {{ current_user.last_name.title() }}</strong><br>
+                        {{ order.shipping_address_line1 }}<br>
+                        {% if order.shipping_address_line2 %}{{ order.shipping_address_line2 }}<br>{% endif %}
+                        {{ order.shipping_city }}, {{ order.shipping_state }} {{ order.shipping_zip_code }}
+                    </address>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer text-end">
+             {# #}
+            <a href="{{ url_for('main.profile_page') }}" class="btn btn-secondary">Return to Order History</a>
+        </div>
+    </div>
+    {% else %}
+        <div class="alert alert-warning" role="alert">
+            Order details could not be loaded.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
