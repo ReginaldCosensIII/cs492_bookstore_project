@@ -11,7 +11,7 @@ services:
     
     # Build and Start Commands
     buildCommand: "./build.sh" # Using a build script is often more flexible
-    startCommand: "gunicorn run:app --workers 4 --threads 2 --worker-tmp-dir /dev/shm --log-file=-" 
+    startCommand: "gunicorn run:app --workers 1 --threads 2 --worker-tmp-dir /dev/shm --log-file=-" 
                   # Workers & threads can be tuned. Logging to stdout/stderr via --log-file=-
 
     # Environment Variables
