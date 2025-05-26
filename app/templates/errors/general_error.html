@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Application Error{% endblock %}
+
+{% block content %}
+<div class="container text-center mt-5 pt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <h1 class="display-3 fw-bold text-warning">Application Error</h1>
+            <h2 class="mb-4">Something Went Wrong</h2>
+            <p class="lead mb-4">
+                {% if error and error.user_facing_message %}
+                    {{ error.user_facing_message }}
+                {% elif error_message %}
+                    {{ error_message }}
+                {% else %}
+                    An unexpected error occurred. Please try again or contact support if the issue persists.
+                {% endif %}
+            </p>
+            <p>
+                <a href="{{ url_for('main.home') }}" class="btn btn-primary btn-lg mt-3">Go to Homepage</a>
+            </p>
+            {% if debug_mode and error and hasattr(error, 'original_exception') and error.original_exception %}
+                 <p class="text-muted mt-4"><small>Debug details: {{ error.original_exception }}</small></p>
+            {% elif debug_mode and error and error.log_message %}
+                 <p class="text-muted mt-4"><small>Debug details: {{ error.log_message }}</small></p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

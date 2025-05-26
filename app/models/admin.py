@@ -1,10 +1,17 @@
-# app/models/admin.py
+# cs492_bookstore_project/app/models/admin.py
+from .user import User # Use relative import
 
-from app.models.employee import Employee
+class Admin(User):
+    def __init__(self, user_id, email, password, first_name, last_name, **kwargs):
+        # Pass all necessary User fields to super().__init__
+        # Assuming User.__init__ takes all these.
+        super().__init__(
+            user_id=user_id, email=email, password=password,
+            first_name=first_name, last_name=last_name, 
+            role='admin', # Role is set here
+            **kwargs # Pass through any other user fields like phone, address etc.
+        )
+        # Admin-specific attributes can be added here if any
 
-class Admin(Employee):
-    def __init__(self, id, username, email, password_hash):
-        super().__init__(id, username, email, password_hash)
-        self.role = 'admin'
-
-    # TODO: Add admin-only methods like manage_users()
+    # TODO: Add admin-only methods or properties if Admin model becomes more distinct
+    # For now, role 'admin' on User object is primary differentiator.

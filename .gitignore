@@ -1,3 +1,5 @@
+# cs492_bookstore_project/.gitignore
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -6,29 +8,140 @@ __pycache__/
 # C extensions
 *.so
 
-# Virtual environment
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are created by PyInstaller.
+#  You probably Bdon't want to customize them for PyInstaller, like adding Breezy files if you want Breezy.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Flask specific
+instance/
+instance/config.cfg  # Default Flask instance config file
+instance/logs/       # For our custom log files
+instance/* # Ignore all other instance specific files unless explicitly unignored
+
+# Transpiled Mako files (if Mako templating is used, not typical for basic Flask)
+*.mako.py
+
+# MyPy cache
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype
+.pytype/
+
+# Environments
+.env
 .venv/
-env/
 venv/
 ENV/
+env/
+env.bak/
+venv.bak/
 
-# Environment variables and config
-.env
-*.env
+# Spyder project settings
+.spyderproject
+.spyderworkspace
 
-# IDE files
-.vscode/
+# Rope project settings
+.ropeproject
+
+# PyCharm
 .idea/
-*.swp
+*.iws
+*.iml
 
-# MacOS
-.DS_Store
+# VS Code
+.vscode/
 
-# Logs
-*.log
-
-# SQLite (if used)
+# SQLite
 *.sqlite3
+*.db3
+*.db  # If using a local .db file for SQLite, exclude it
 
-# Render build artifacts
-build/
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+#   For pyenv's benefit, ignore .python-version since it's auto-generated files from a tool.
+#   This list files are actually auto-generated files from a tool that users will probably not want to edit.
+.python-version
+
+# Environments - Conda
+conda-meta/
+# Environments - Poetry
+poetry.lock
+
+# Sass
+.sass-cache/
+*.css.map
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+# Thumbnails
+._*
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+# Linux
+*~
+# KDE KDevelop session files
+*.kdev4
+
+# If you have other specific files or directories to ignore, add them here.
+# For example, if you have local media uploads not meant for the repo:
+# app/static/uploads/

@@ -1,16 +1,47 @@
+# cs492_bookstore_project/render.yaml
+# This blueprint describes the services for deploying the Flask Bookstore application on Render.com.
+
 services:
-  - type: web
-    name: cs492-bookstore-app
-    env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn main:create_app()"
+  - type: web       # Specifies this is a web service
+    name: cs492-bookstore-project # A unique name for your service on Render
+    env: python     # Specifies the runtime environment
+    region: oregon  # Optional: Specify your preferred region (e.g., oregon, frankfurt)
+                    # Check Render's documentation for available regions. Default is Oregon.
+    plan: free      # Optional: Specify your plan (e.g., free, starter). Defaults to free if available.
+    
+    # Build and Start Commands
+    buildCommand: "./build.sh" # Using a build script is often more flexible
+    startCommand: "gunicorn run:app --workers 4 --threads 2 --worker-tmp-dir /dev/shm --log-file=-" 
+                  # Workers & threads can be tuned. Logging to stdout/stderr via --log-file=-
+
+    # Environment Variables
+    # Some are set directly, others are pulled from an Environment Group on Render.
     envVars:
-      - key: FLASK_ENV
-        value: production
-      - key: SECRET_KEY
-        value: your-secret-key
-      - key: DATABASE_URL
-        fromDatabase:
-          name: bookstore_db
-          property: connectionString
-    autoDeploy: true
+      - key: PYTHON_VERSION
+        value: "3.11.8" # Specify a recent, stable Python version supported by Render. Check Render docs.
+                        # Using 3.11 as it's widely supported and stable. 3.13.x might be too new for PaaS.
+      - key: FLASK_APP    # Tells Flask where to find the application instance
+        value: "run:app"  # Points to the 'app' object in 'run.py'
+      - key: FLASK_CONFIG # Specifies which configuration class from config.py to use
+        value: "production" 
+      # For sensitive credentials like DATABASE_URL and FLASK_SECRET_KEY,
+      # it's best practice to use Render's "Environment Groups".
+      # Create an Environment Group on Render (e.g., 'bookstore-credentials')
+      # and add your FLASK_SECRET_KEY and DATABASE_URL there.
+      - fromGroup: bookstore-credentials # Name of your environment variable group on Render
+
+    # Health Check
+    # Render uses this path to determine if your application is healthy and ready to receive traffic.
+    healthCheckPath: /health # Ensure this route exists in your app (we added it in app/__init__.py)
+    # instanceCount: 1 # Optional: Number of instances to run. Defaults to 1 on free/starter.
+
+    # Optional: Databases (if you are creating the database via this blueprint)
+    # If you've already created your PostgreSQL database separately on Render,
+    # you just need to set the DATABASE_URL in your environment group.
+    # If you want the blueprint to manage the database creation:
+    # databases:
+    #   - name: bookstore-db # A name for your database instance on Render
+    #     databaseName: bookstore_scro # The actual name of the database to be created
+    #     user: bookstore_user       # The username for the database
+    #     plan: free                 # Optional: Specify plan for DB if different or needed
+                                     # Note: Database connection string will be available as an env var.

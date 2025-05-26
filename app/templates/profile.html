@@ -1,0 +1,206 @@
+{# cs492_bookstore_project/app/templates/profile.html #}
+{% extends "base.html" %}
+
+{% block title %}My Profile - {{ current_user.first_name.title() }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">My Profile</h1>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    Personal Information
+                </div>
+                <div class="card-body">
+                    <p><strong>Name:</strong> {{ current_user.first_name.title() }} {{ current_user.last_name.title() }}</p>
+                    <p><strong>Email:</strong> {{ current_user.email }}</p>
+                    <p><strong>Phone:</strong> {{ current_user.phone_number if current_user.phone_number else 'N/A' }}</p>
+                    <hr>
+                    <h6>Default Shipping Address:</h6>
+                    <address class="small">
+                        {{ current_user.address_line1 if current_user.address_line1 else 'No address line 1 on file.' }}<br>
+                        {% if current_user.address_line2 %}{{ current_user.address_line2 }}<br>{% endif %}
+                        {{ current_user.city if current_user.city else 'N/A' }}, 
+                        {{ current_user.state if current_user.state else 'N/A' }} 
+                        {{ current_user.zip_code if current_user.zip_code else 'N/A' }}
+                    </address>
+                    <button class="btn btn-outline-secondary btn-sm mt-2" disabled>Edit Profile (Coming Soon)</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    My Order History
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    {% if orders and orders|length > 0 %}
+                        <div class="list-group list-group-flush">
+                            {% for order_obj in orders %}
+                                <a href="{{ url_for('order.view_order_details_route', order_id=order_obj.order_id) }}" class="list-group-item list-group-item-action flex-column align-items-start mb-2">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">Order #{{ order_obj.order_id }}</h6>
+                                        <small class="text-muted">{{ order_obj.order_date.strftime('%b %d, %Y') if order_obj.order_date else 'N/A' }}</small>
+                                    </div>
+                                    <p class="mb-1 small"><strong>Total:</strong> ${{ "%.2f"|format(order_obj.total_amount) }}</p>
+                                    <p class="mb-0 small"><strong>Status:</strong> <span class="badge 
+                                        {% if order_obj.status == 'Pending Payment' %}bg-info text-white
+                                        {% elif order_obj.status == 'Awaiting Fulfillment' %}bg-warning text-dark
+                                        {% elif order_obj.status == 'On Hold' %}bg-secondary text-white
+                                        {% elif order_obj.status == 'Payment Failed' %}bg-danger text-white
+                                        {% elif order_obj.status == 'Refunded' %}bg-dark text-white
+                                        {% elif order_obj.status == 'Partially Refunded' %}bg-dark text-white
+                                        {% elif order_obj.status == 'Awaiting Shipment' %}bg-warning text-dark
+                                        {% elif order_obj.status == 'Awaiting Pickup' %}bg-warning text-dark
+                                        {% elif order_obj.status == 'Ready for Pickup' %}bg-success text-white
+                                        {% elif order_obj.status == 'Completed' %}bg-success text-white
+                                        {% elif order_obj.status == 'Processing' %}bg-info text-white
+                                        {% elif order_obj.status == 'Shipped' %}bg-primary text-white
+                                        {% elif order_obj.status == 'Delivered' %}bg-success text-white
+                                        {% elif order_obj.status == 'Cancelled' %}bg-danger text-white
+                                        {% else %}bg-secondary text-white
+                                        {% endif %}
+                                        ">{{ order_obj.status }}</span></p>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p>You have not placed any orders yet.</p>
+                        <a href="{{ url_for('main.home')}}" class="btn btn-sm btn-primary">Start Shopping</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-2">
+        <div class="col-md-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    My Reviews
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    {% if reviews and reviews|length > 0 %}
+                        <div class="list-group list-group-flush" id="profile-reviews-list-container-js">
+                            {% for review_item in reviews %} {# review_item is a dict from the service #}
+                            <div class="list-group-item mb-2" id="profile-review-item-{{ review_item.id }}">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Review for: 
+                                        <a href="#" onclick="openBookReviewModalAndEdit('{{ review_item.book_id | string }}', '{{ review_item.id }}', {{ review_item.rating }}, `{{ (review_item.comment or '') | replace('`', '\\`') | replace("'", "\\'") | striptags | safe }}`); return false;" class="text-decoration-none">
+                                            {{ review_item.book_title.title() if review_item.book_title else 'Book Title N/A' }}
+                                        </a>
+                                    </h6>
+                                    <small class="text-muted">{{ review_item.created_at.strftime('%b %d, %Y') if review_item.created_at else 'N/A' }}</small>
+                                </div>
+                                <p class="mb-1">
+                                    <strong>Rating:</strong> 
+                                    {% for i in range(1, 6) %}
+                                        <span class="text-{{ 'warning' if i <= review_item.rating else 'secondary' }}">{{ '★' if i <= review_item.rating else '☆' }}</span>
+                                    {% endfor %}
+                                    ({{ review_item.rating }}/5)
+                                </p>
+                                {% if review_item.comment and review_item.comment.strip() != "" %}
+                                    <p class="mb-1 fst-italic">"{% filter striptags %}{{ review_item.comment }}{% endfilter %}"</p>
+                                {% else %}
+                                    <p class="mb-1 fst-italic text-muted"><em>No comment left.</em></p>
+                                {% endif %}
+                                <div class="mt-2 review-actions">
+                                    <button class="btn btn-outline-secondary btn-sm me-2" 
+                                            onclick="openBookReviewModalAndEdit('{{ review_item.book_id | string }}', '{{ review_item.id }}', {{ review_item.rating }}, `{{ (review_item.comment or '') | replace('`', '\\`') | replace("'", "\\'") | striptags | safe }}`)">
+                                        Edit
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" 
+                                            onclick="handleDeleteReviewOnProfile('{{ review_item.book_id | string }}', '{{ review_item.id }}')">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p id="no-reviews-message-js">You have not written any reviews yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-2">
+        <div class="col-md-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    Payment Methods
+                </div>
+                <div class="card-body">
+                    <p><em>Manage payment methods feature coming soon.</em></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }} {# Includes scripts from base.html (like global currentUserId, review_handler.js) #}
+<script>
+    async function openBookReviewModalAndEdit(bookId, reviewId, rating, comment) {
+        if (typeof openBookReviewModal === "function") { // From review_handler.js
+            openBookReviewModal(bookId); 
+            setTimeout(() => {
+                if (typeof initiateEditReview === "function") { // From review_handler.js
+                    initiateEditReview(bookId, reviewId, rating, comment);
+                } else { console.error("initiateEditReview function not found."); }
+            }, 700); 
+        } else {
+            console.error("openBookReviewModal function not found.");
+            alert("Could not open the review editing interface. Please try editing from the book's main detail page.");
+        }
+    }
+    
+    /**
+     * Initiates the delete process for a review listed on the profile page.
+     * It calls the global handleDeleteReview function and provides a callback
+     * to specifically update the DOM on this profile page only upon successful deletion.
+     */
+    async function handleDeleteReviewOnProfile(bookIdForModalContext, reviewId) {
+        // Define what should happen *after* the global handler confirms success via API
+        const afterSuccessfulApiDeleteCallback = (deletedReviewId) => {
+            const reviewItemElement = document.getElementById(`profile-review-item-${deletedReviewId}`);
+            if (reviewItemElement) {
+                console.log(`Removing review item ${deletedReviewId} from profile page DOM.`);
+                reviewItemElement.remove();
+                
+                // Check if the "My Reviews" list is now empty and update message
+                const reviewsListContainer = document.getElementById('profile-reviews-list-container-js');
+                const noReviewsMessageElement = document.getElementById('no-reviews-message-js'); 
+                
+                if (reviewsListContainer && reviewsListContainer.children.length === 0) {
+                    // If the "no reviews" message element was hidden or not present, create/show it
+                    if (noReviewsMessageElement && noReviewsMessageElement.parentNode === reviewsListContainer.parentNode) {
+                        // If p id="no-reviews-message-js" exists at the same level as list container
+                        reviewsListContainer.style.display = 'none'; // Hide the empty list-group div
+                        noReviewsMessageElement.style.display = 'block'; // Show the "no reviews" message
+                    } else {
+                        // If the specific "no reviews" p tag is not found, just clear the container
+                        // or inject a new message. This assumes noReviewsMessageElement is the <p> tag.
+                        reviewsListContainer.parentNode.innerHTML = '<p>You have not written any reviews yet.</p>';
+                    }
+                }
+            }
+        };
+
+        if (typeof handleDeleteReview === "function") { // This is the global function from review_handler.js
+            // Pass bookIdForModalContext (not strictly needed if not refreshing a modal here)
+            // Pass the reviewId to delete
+            // Pass our specific callback for DOM manipulation on this page AFTER successful API delete
+            await handleDeleteReview(bookIdForModalContext, reviewId, afterSuccessfulApiDeleteCallback);
+        } else {
+            console.error("Global handleDeleteReview function not found.");
+            alert("Could not process delete request at this time due to a configuration error.");
+        }
+    }
+</script>
+{% endblock %}
