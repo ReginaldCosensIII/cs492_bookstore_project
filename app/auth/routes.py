@@ -7,7 +7,7 @@ from app.utils import sanitize_form_data, sanitize_form_field_value             
 from app.logger import get_logger                                                   # Custom application logger
 from flask_login import login_user, logout_user, current_user, login_required       # For user seesion management
 from app.services.reg_service import register_user, validate_registration_data      # For registration & validation
-from flask import render_template, request, redirect, url_for, flash, current_app   # For Flask utilities
+from flask import render_template, request, redirect, url_for, flash, current_app, session      # For Flask utilities
 from app.services.exceptions import ValidationError, AuthenticationError, DatabaseError, AppException # Custom exceptions for error handling
 
 logger = get_logger(__name__) # Logger instance for this module
@@ -244,13 +244,26 @@ def logout():
     Returns:
         Response: A redirect to the home page.
     """
-    user_email_for_log = getattr(current_user, 'email', 'UNKNOWN_USER') # Safe access for logging
+    user_email_for_log = getattr(current_user, 'email', 'UNKNOWN_USER') 
     user_id_for_log = getattr(current_user, 'id', 'UNKNOWN_ID')
-    logger.info(f"User '{user_email_for_log}' (ID: {user_id_for_log}) initiated logout.")
+    logger.info(f"User '{user_email_for_log}' (ID: {user_id_for_log}) initiating logout.")
     
-    logout_user() # Clears the user session
+    # Clear the shopping cart from the session
+    if 'cart' in session:
+        session.pop('cart', None)
+        logger.info(f"Shopping cart cleared for user '{user_email_for_log}' upon logout.")
     
-    flash("You have been successfully logged out.", "success")
-    logger.info(f"User (formerly '{user_email_for_log}') logged out. Redirecting to home.")
+    # Clear any guest-specific session flags that might persist if user was guest then logged in
+    session.pop('guest_checkout_email_prefill', None)
+    session.pop('just_placed_order_id', None) 
+    session.pop('guest_order_email', None)    
+    
+    logout_user() # Flask-Login function to log the user out
+    
+    # Explicitly mark session as modified if items were popped.
+    # logout_user() also modifies session, but this ensures our pops are saved.
+    session.modified = True 
 
+    flash("You have been successfully logged out. Your cart has been cleared.", "info") 
+    logger.info(f"User (formerly '{user_email_for_log}') logged out successfully. Cart cleared. Redirecting to home page.")
     return redirect(url_for('main.home'))
