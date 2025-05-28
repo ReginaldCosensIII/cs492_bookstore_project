@@ -119,23 +119,38 @@ def create_app(config_name: str = 'default') -> Flask:
 
     login_manager.init_app(app)
     logger.info("Flask-Login extension initialized and configured for the application.")
-
     logger.info("Registering application blueprints...")
+
     from .main import main_bp
+
     app.register_blueprint(main_bp) 
     logger.info(f"Registered blueprint: '{main_bp.name}' (Effective URL prefix: '{main_bp.url_prefix or '/'}')")
+
     from .auth import auth_bp
+
     app.register_blueprint(auth_bp)
     logger.info(f"Registered blueprint: '{auth_bp.name}' (Effective URL prefix: '{auth_bp.url_prefix}')")
+
     from .cart import cart_bp
+
     app.register_blueprint(cart_bp)
     logger.info(f"Registered blueprint: '{cart_bp.name}' (Effective URL prefix: '{cart_bp.url_prefix}')")
+
     from .reviews import reviews_api_bp 
+
     app.register_blueprint(reviews_api_bp)
     logger.info(f"Registered blueprint: '{reviews_api_bp.name}' (Effective URL prefix: '{reviews_api_bp.url_prefix}')")
+
     from .order import order_bp 
+
     app.register_blueprint(order_bp)
     logger.info(f"Registered blueprint: '{order_bp.name}' (Effective URL prefix: '{order_bp.url_prefix}')")
+
+    from .admin import admin_bp 
+
+    app.register_blueprint(admin_bp)
+    logger.info(f"Registered blueprint: '{admin_bp.name}' (Effective URL prefix: '{admin_bp.url_prefix}')")
+       
     logger.info("All blueprints registered.")
 
     # Context Processors - make variables automatically available to all templates

@@ -65,19 +65,6 @@
         </div>
     </div>
 
-    <div class="col-md-6">
-        <label for="role" class="form-label">Role</label>
-        <select class="form-select" id="role" name="role" required>
-            <option value="" disabled {% if not form_data.get('role') %}selected{% endif %}>Choose role...</option>
-            <option value="customer" {% if form_data.get('role') == 'customer' %}selected{% endif %}>Customer</option>
-            <option value="admin" {% if form_data.get('role') == 'admin' %}selected{% endif %}>Admin</option>
-            <option value="employee" {% if form_data.get('role') == 'employee' %}selected{% endif %}>Employee</option>
-        </select>
-        <div class="invalid-feedback">
-            Please select a role.
-        </div>
-    </div>
-
     <div class="col-12">
         <label for="address_line1" class="form-label">Address Line 1</label>
         <input type="text" class="form-control" id="address_line1" name="address_line1" value="{{ form_data.get('address_line1', '') }}" required>

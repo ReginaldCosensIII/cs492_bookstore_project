@@ -1,0 +1,95 @@
+{# cs492_bookstore_project/app/templates/admin/admin_books_list.html #}
+{% extends "base.html" %}
+
+{% block title %}Admin - Manage Books{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+        <h1 class="display-6">Manage Books</h1>
+        <a href="{{ url_for('admin.add_book') }}" class="btn btn-success">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle-fill me-1" viewBox="0 0 16 16">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3z"/>
+            </svg>
+            Add New Book
+        </a>
+    </div>
+
+    {% if books %}
+        <div class="table-responsive shadow-sm rounded">
+            <table class="table table-striped table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th scope="col" style="width: 5%;">ID</th>
+                        <th scope="col" style="width: 10%;">Cover</th>
+                        <th scope="col" style="width: 25%;">Title</th>
+                        <th scope="col" style="width: 20%;">Author</th>
+                        <th scope="col" style="width: 10%;">Genre</th>
+                        <th scope="col" class="text-end" style="width: 10%;">Price</th>
+                        <th scope="col" class="text-center" style="width: 5%;">Stock</th>
+                        <th scope="col" class="text-center" style="width: 15%;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for book in books %}
+                    <tr>
+                        <th scope="row">{{ book.book_id }}</th>
+                        <td>
+                            <img src="{{ book.image_url if book.image_url and book.image_url != 'https://via.placeholder.com/150x220.png?text=No+Image+Available' else url_for('static', filename='images/placeholder_book.png') }}" 
+                                 alt="{{ book.title.title() }}" 
+                                 style="width: 48px; height: 55px;"
+                                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/placeholder_book_error.png') }}';">
+                        </td>
+                        <td>{{ book.title.title() }}</td>
+                        <td>{{ book.author }}</td>
+                        <td>{{ book.genre }}</td>
+                        <td class="text-end">${{ "%.2f"|format(book.price) }}</td>
+                        <td class="text-center">{{ book.stock_quantity }}</td>
+                        <td class="text-center">
+                            <a href="{{ url_for('admin.edit_book', book_id=book.book_id) }}" class="btn btn-sm btn-outline-primary me-1 mb-1" title="Edit Book">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                                    <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                                    <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
+                                </svg> Edit
+                            </a>
+                            {# Delete button with simplified onsubmit, uses data attribute #}
+                            <form action="{{ url_for('admin.delete_book', book_id=book.book_id) }}" method="POST" 
+                                  class="d-inline delete-book-form" 
+                                  data-book-title="{{ book.title.title()|e }}"> {# Store title here, 'e' is for HTML attribute escape #}
+                                <button type="submit" class="btn btn-sm btn-outline-danger mb-1" title="Delete Book">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16">
+                                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.024l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528ZM8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5Z"/>
+                                    </svg> Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info mt-3" role="alert">
+            No books found in the system. You can <a href="{{ url_for('admin.add_book') }}" class="alert-link">add the first book now</a>.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForms = document.querySelectorAll('.delete-book-form');
+    deleteForms.forEach(form => {
+        form.addEventListener('submit', function(event) {
+            const bookTitle = event.target.dataset.bookTitle || "this book"; // Fallback title
+            const confirmation = confirm(`Are you sure you want to permanently delete the book: '${bookTitle}'? This action cannot be undone.`);
+            if (!confirmation) {
+                event.preventDefault(); // Stop form submission if user cancels
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

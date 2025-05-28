@@ -1,0 +1,102 @@
+{# cs492_bookstore_project/app/templates/admin/admin_book_form.html #}
+{% extends "base.html" %}
+
+{% block title %}Admin - {{ form_title|default('Manage Book') }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <h1 class="display-5 mb-4">{{ form_title }}</h1>
+            
+            {# Display flashed messages specifically from form validation if any #}
+            {# This can be enhanced if errors are passed in a structured way #}
+
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ action_url }}" novalidate>
+                        {# CSRF Token - if using Flask-WTF or similar, include it here #}
+                        {# {{ form.csrf_token }} #}
+
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   value="{{ book.get('title', '').title() if book.get('title') else '' }}" required maxlength="255">
+                            <div class="invalid-feedback">Please provide a book title.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="author" class="form-label">Author <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="author" name="author" 
+                                   value="{{ book.get('author', '') }}" required maxlength="255">
+                            <div class="invalid-feedback">Please provide the author's name.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="genre" class="form-label">Genre</label>
+                            <input type="text" class="form-control" id="genre" name="genre" 
+                                   value="{{ book.get('genre', '') }}" maxlength="100">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="price" class="form-label">Price ($) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="price" name="price" 
+                                       value="{{ book.get('price', '0.00') }}" required step="0.01" min="0">
+                                <div class="invalid-feedback">Please enter a valid price.</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="stock_quantity" class="form-label">Stock Quantity <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="stock_quantity" name="stock_quantity" 
+                                       value="{{ book.get('stock_quantity', '0') }}" required step="1" min="0">
+                                <div class="invalid-feedback">Please enter a valid stock quantity.</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="5">{{ book.get('description', '') }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="image_url" class="form-label">Image URL</label>
+                            <input type="url" class="form-control" id="image_url" name="image_url" 
+                                   value="{{ book.get('image_url', '') }}" placeholder="https://example.com/image.jpg">
+                            {% if book.get('image_url') %}
+                                <img src="{{ book.get('image_url') }}" alt="Current Cover" class="img-thumbnail mt-2" style="max-height: 100px;">
+                            {% endif %}
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="d-flex justify-content-end">
+                            <a href="{{ url_for('admin.list_books') }}" class="btn btn-outline-secondary me-2">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                {{ 'Update Book' if book.get('book_id') else 'Add Book' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Basic client-side validation script (Bootstrap's default) #}
+<script>
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('form[novalidate]')
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })
+    })()
+</script>
+{% endblock %}

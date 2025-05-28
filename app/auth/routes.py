@@ -39,6 +39,7 @@ def register():
     Returns:
         Response: Renders the registration template or redirects on success/existing session.
     """
+    print("***********************************************************************************************")
     if current_user.is_authenticated:
         logger.info(f"Authenticated user {current_user.id} attempted to access /register. Redirecting to home.")
 
@@ -163,75 +164,47 @@ def login():
     Returns:
         Response: Renders the login template or redirects on success/existing session.
     """
-    if current_user.is_authenticated:
-        logger.info(f"User {current_user.id} already authenticated, attempting to access /login. Redirecting.")
-
-        if hasattr(current_user, 'role'): # Check if role attribute exists
-
-            if current_user.role == 'admin':
-                return redirect(url_for('main.admin_dashboard'))
-            
-            elif current_user.role == 'employee':
-                return redirect(url_for('main.employee_dashboard'))
-            
-        return redirect(url_for('main.customer')) # Default redirect for authenticated customer or unknown role
-
+    
     if request.method == 'POST':
-        form_data = request.form.to_dict()
-        email_raw = form_data.get('email', '')
-        password_input = form_data.get('password', '') # Raw password
-
-        # Sanitize email: strip whitespace and lowercase. HTML escaping is not needed for email.
-        email_sanitized = sanitize_form_field_value(email_raw, key_name='email', should_escape_html=False)
-        logger.debug(f"Login attempt for sanitized email: '{email_sanitized}'")
-
+        # ... (form processing, authentication as in response #81) ...
         try:
-            user = authenticate_user(email_sanitized, password_input) # auth_service handles actual authentication            
-            login_user(user) # Flask-Login handles setting up the user session
-            user_name_for_flash = getattr(user, 'first_name', 'User').title()
-            logger.info(f"User '{user.email}' (ID: {user.id}, Role: {user.role}) logged in successfully.")
-            flash(f"Welcome back, {user_name_for_flash}!", "success")
+            # ... (authenticate_user call) ...
+            email_sanitized = request.form.get('email', '').strip().lower()
+            password_input = request.form.get('password', '').strip()
+            logger.debug(f"Login attempt with sanitized email: {email_sanitized}")
+            i = 0
+            user = authenticate_user(email_sanitized, password_input)
+            login_user(user)
 
-            # Redirect to 'next' page if provided (e.g., after being redirected by @login_required)
-            next_page = request.args.get('next')
-            # Basic security check for open redirect vulnerability
-            if next_page and next_page.startswith('/') and not next_page.startswith('//'):
-                logger.debug(f"Redirecting logged-in user to 'next' page: {next_page}")
-
-                return redirect(next_page)
+            # ... (flash welcome message) ...
             
-            # Role-based redirection if no 'next' page
-            if hasattr(user, 'role'):
-                if user.role == 'admin':
-                    logger.debug("Redirecting admin user to admin_dashboard.")
+            # Role-based redirection after successful login
+            user_role = getattr(user, 'role', None)
 
-                    return redirect(url_for('main.admin_dashboard'))
-                
-                elif user.role == 'employee':
-                    logger.debug("Redirecting employee user to employee_dashboard.")
+            if user_role == 'admin':                
+                logger.debug("Redirecting admin user to admin.dashboard.")
 
-                    return redirect(url_for('main.employee_dashboard'))
+                return redirect(url_for('admin.dashboard')) # <<< Use new admin endpoint
             
-            logger.debug("Redirecting customer or user with default role to customer dashboard.")
+            elif user_role == 'employee':
+                logger.debug("Employee role detected. Redirecting to placeholder/home.")
+                flash("Employee dashboard is under construction.", "info")
+                return redirect(url_for('main.home'))
 
-            return redirect(url_for('main.customer')) # Default redirect
-
-        except AuthenticationError as ae: # Custom exception from auth_service
+            logger.debug("Redirecting customer to main.customer.")
+            return redirect(url_for('main.customer'))
+        # ... (exception handling as in response #81) ...
+        except AuthenticationError as ae: 
             logger.warning(f"Authentication failed for email '{email_sanitized}': {ae.user_facing_message}")
             flash(ae.user_facing_message, "danger")
-
-        except DatabaseError as de: # Custom exception from auth_service
+        except DatabaseError as de: 
             logger.error(f"Login database error for email '{email_sanitized}': {de.log_message}", exc_info=True)
             flash(de.user_facing_message, "danger")
+        except Exception as e: 
+            logger.critical(f"Unexpected error during login for email '{email_sanitized}': {e}", exc_info=True)
+            flash("An unexpected server error occurred during login. Please try again.", "danger")
 
-        except Exception as e: # Catch any other unexpected exceptions
-            logger.critical(f"Unexpected error during login process for email '{email_sanitized}': {e}", exc_info=True)
-            flash("An unexpected server error occurred during login. Please try again later.", "danger")
-
-    # For GET request or if POST fails and needs to re-render form
-    logger.debug("GET request for /login or re-rendering login form after POST error.")
-    return render_template('login.html')
-
+    return render_template('login.html') # Path based on auth_bp template_folder
 
 @auth_bp.route('/logout')
 @login_required # Ensures only logged-in users can access this route

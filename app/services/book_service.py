@@ -1,21 +1,12 @@
 # app/services/book_service.py
 
 import psycopg2                                                       # For database errors
-from decimal import Decimal                                                         # For type hinting
+from decimal import Decimal, InvalidOperation                                                         # For type hinting
 from app.models.book import Book                                                    # Book model class
 from app.logger import get_logger                                                   # Custom application logger
 from typing import List, Optional                                                   # For type hinting
 from app.models.db import get_db_connection                                         # For database connections
 from app.services.exceptions import DatabaseError, NotFoundError, ValidationError   # Custom exceptions
-
-# cs492_bookstore_project/app/services/book_service.py
-from typing import List, Optional # For type hinting
-
-from app.models.book import Book  # Book model class
-from app.models.db import get_db_connection # For database connections
-from app.services.exceptions import DatabaseError, NotFoundError, ValidationError # Custom exceptions
-from app.logger import get_logger # Custom application logger
-# from decimal import Decimal # Not directly used here, Book model handles it
  
 logger = get_logger(__name__) # Logger instance for this module
 
@@ -257,3 +248,158 @@ def decrease_book_stock(book_id: int, quantity_to_decrease: int, db_conn=None) -
 
             conn_to_use.close()
             logger.debug(f"Locally managed database connection closed after stock decrease attempt for book_id {book_id}.")
+
+# --- Admin Specific Book Management Functions ---
+
+def admin_add_book(book_data: dict[str, any]) -> Book:
+    """
+    Adds a new book to the database based on data provided by an admin.
+    This function validates required fields and then creates and saves a new Book instance.
+
+    Args:
+        book_data (Dict[str, Any]): A dictionary containing the new book's details.
+                                    Expected keys: 'title', 'author', 'genre', 'price', 
+                                    'stock_quantity'. Optional: 'image_url', 'description'.
+
+    Returns:
+        Book: The newly created and saved `Book` object.
+
+    Raises:
+        ValidationError: If required fields (title, author) are missing or if price/stock
+                         cannot be converted to their appropriate types.
+        DatabaseError: If an error occurs during the database save operation.
+    """
+    logger.info(f"Service (Admin): Attempting to add new book with title: '{book_data.get('title', 'N/A')}'")
+    
+    # Basic validation for required fields by admin
+    if not book_data.get('title') or not book_data.get('author'):
+        logger.warning("Admin add book failed: Title and Author are required.")
+        raise ValidationError("Title and Author are required fields to add a new book.",
+                              errors={'title': 'Title is required.', 'author': 'Author is required.'})
+    try:
+        # Ensure price and stock are correctly typed before creating Book object
+        price = Decimal(str(book_data.get('price', '0.00')))
+        stock_quantity = int(book_data.get('stock_quantity', 0))
+    except (InvalidOperation, ValueError) as e:
+        logger.warning(f"Invalid numeric format for price or stock in admin_add_book: {e}")
+        raise ValidationError("Price and Stock Quantity must be valid numbers.", original_exception=e)
+
+    # Create a new Book instance
+    # The Book model's __init__ will handle lowercasing title, Decimal conversion, and defaults.
+    new_book = Book(
+        title=book_data.get('title', ''),
+        author=book_data.get('author', ''),
+        genre=book_data.get('genre', ''),
+        price=price,
+        stock_quantity=stock_quantity,
+        image_url=book_data.get('image_url'),
+        description=book_data.get('description')
+    )
+    
+    try:
+        new_book.save() # The Book model's save method handles DB insertion and sets book_id
+        logger.info(f"Service (Admin): Book '{new_book.title.title()}' (ID: {new_book.book_id}) added successfully.")
+        return new_book
+    except DatabaseError as de: # Catch specific DB errors from book.save()
+        logger.error(f"Service (Admin): Database error adding book '{new_book.title}': {de.log_message}", exc_info=True)
+        raise # Re-raise to be handled by route
+    except Exception as e: # Catch any other unexpected errors during save
+        logger.error(f"Service (Admin): Unexpected error adding book '{new_book.title}': {e}", exc_info=True)
+        raise DatabaseError(f"Could not add book '{new_book.title}' due to a server error.", original_exception=e)
+
+def admin_update_book(book_id: int, book_data: dict[str, any]) -> Book:
+    """
+    Updates an existing book's details based on data provided by an admin.
+    Fetches the book by ID, updates its attributes, and saves the changes.
+
+    Args:
+        book_id (int): The ID of the book to update.
+        book_data (Dict[str, Any]): A dictionary containing the book's attributes to update.
+                                    Expected keys can include 'title', 'author', 'genre', 
+                                    'price', 'stock_quantity', 'image_url', 'description'.
+
+    Returns:
+        Book: The updated `Book` object.
+
+    Raises:
+        NotFoundError: If the book with the given `book_id` is not found.
+        ValidationError: If required fields are missing or data types are invalid for update.
+        DatabaseError: If an error occurs during the database save operation.
+    """
+    logger.info(f"Service (Admin): Attempting to update book with ID: {book_id}")
+    
+    book_to_update = get_book_by_id(book_id) # This will raise NotFoundError if book doesn't exist
+    
+    # Update attributes of the fetched Book object
+    # Book model's __init__ and property setters should handle type conversions and defaults
+    if 'title' in book_data: book_to_update.title = str(book_data['title']).strip().lower()
+    if 'author' in book_data: book_to_update.author = str(book_data['author']).strip()
+    if 'genre' in book_data: book_to_update.genre = str(book_data['genre']).strip()
+    
+    try:
+        if 'price' in book_data: 
+            book_to_update.price = Decimal(str(book_data['price'])).quantize(Decimal('0.01'))
+        if 'stock_quantity' in book_data: 
+            book_to_update.stock_quantity = int(book_data['stock_quantity'])
+    except (InvalidOperation, ValueError) as e:
+        logger.warning(f"Invalid numeric format for price or stock in admin_update_book (ID: {book_id}): {e}")
+        raise ValidationError("Price and Stock Quantity must be valid numbers for update.", original_exception=e)
+
+    # Optional fields: only update if provided in book_data to avoid overwriting with None
+    if 'image_url' in book_data: book_to_update.image_url = book_data.get('image_url') or Book._default_image_url # Assuming Book has a default
+    if 'description' in book_data: book_to_update.description = book_data.get('description') or Book._default_description # Assuming Book has a default
+    
+    # Basic validation after attempting updates
+    if not book_to_update.title or not book_to_update.author:
+        logger.warning(f"Admin update book ID {book_id} failed: Title and Author are required.")
+        raise ValidationError("Title and Author cannot be empty for book update.",
+                              errors={'title_author': "Title and Author are required."})
+
+    try:
+        book_to_update.save() # Book model's save method handles DB update
+        logger.info(f"Service (Admin): Book '{book_to_update.title.title()}' (ID: {book_id}) updated successfully.")
+        return book_to_update
+    except DatabaseError as de:
+        logger.error(f"Service (Admin): Database error updating book ID {book_id}: {de.log_message}", exc_info=True)
+        raise
+    except Exception as e:
+        logger.error(f"Service (Admin): Unexpected error updating book ID {book_id}: {e}", exc_info=True)
+        raise DatabaseError(f"Could not update book ID {book_id} due to a server error.", original_exception=e)
+
+
+def admin_delete_book(book_id: int) -> bool:
+    """
+    Deletes a book from the database, intended for use by an administrator.
+
+    Args:
+        book_id (int): The ID of the book to be deleted.
+
+    Returns:
+        bool: True if the book was successfully deleted.
+
+    Raises:
+        NotFoundError: If the book with the given `book_id` is not found (raised by Book.delete if it returns False).
+        DatabaseError: If an error occurs during the database delete operation.
+    """
+    logger.info(f"Service (Admin): Attempting to delete book with ID: {book_id}")
+    
+    # First, check if the book exists to provide a clear NotFoundError if it doesn't.
+    # This makes the behavior consistent with get_book_by_id.
+    book_exists = get_book_by_id(book_id) # This will raise NotFoundError if book not found
+    
+    try:
+        # Delegate to the Book model's static delete method
+        if Book.delete(book_id):
+            logger.info(f"Service (Admin): Book ID {book_id} deleted successfully.")
+            return True
+        else:
+            # This case should ideally be caught by get_book_by_id raising NotFoundError.
+            # If Book.delete returns False without raising, it means not found or not deleted.
+            logger.warning(f"Service (Admin): Book ID {book_id} was reported as not deleted by Book.delete(), though it might have been found by get_book_by_id. This could indicate an issue.")
+            raise NotFoundError(resource_name="Book", resource_id=book_id, message="Book not found or could not be deleted.")
+    except DatabaseError as de:
+        logger.error(f"Service (Admin): Database error deleting book ID {book_id}: {de.log_message}", exc_info=True)
+        raise
+    except Exception as e: # Catch any other unexpected errors
+        logger.error(f"Service (Admin): Unexpected error deleting book ID {book_id}: {e}", exc_info=True)
+        raise DatabaseError(f"Could not delete book ID {book_id} due to a server error.", original_exception=e)
