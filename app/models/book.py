@@ -27,8 +27,7 @@ class Book:
         updated_at (datetime, optional): Timestamp of when the book record was last updated in the DB.
     """
     def __init__(self, title: str, author: str, genre: str, price, stock_quantity: int, 
-                 image_url: str = None, description: str = None, book_id: int = None, 
-                 created_at=None, updated_at=None):
+                 image_url: str = None, description: str = None, book_id: int = None):
         """
         Initializes a new Book instance.
 
@@ -63,8 +62,6 @@ class Book:
         self.stock_quantity = int(stock_quantity) if stock_quantity is not None else 0
         self.image_url = image_url or 'https://via.placeholder.com/150x220.png?text=No+Image+Available'
         self.description = description or "No description available for this book."
-        self.created_at = created_at # Typically set by the database on insert
-        self.updated_at = updated_at # Typically set by the database on insert/update
 
     def to_dict(self, include_timestamps: bool = False) -> dict:
         """
@@ -89,10 +86,6 @@ class Book:
             'image_url': self.image_url,
             'description': self.description
         }
-
-        if include_timestamps:
-            data['created_at'] = self.created_at.isoformat() if self.created_at else None
-            data['updated_at'] = self.updated_at.isoformat() if self.updated_at else None
 
         return data
 
@@ -124,8 +117,6 @@ class Book:
             stock_quantity=row_dict.get('stock_quantity'),
             image_url=row_dict.get('image_url'),
             description=row_dict.get('description'),
-            created_at=row_dict.get('created_at'), # Assuming 'books' table has these
-            updated_at=row_dict.get('updated_at')  # Assuming 'books' table has these
         )
 
     def save(self):
@@ -150,7 +141,6 @@ class Book:
                         UPDATE books
                         SET title = %s, author = %s, genre = %s, price = %s, 
                             stock_quantity = %s, image_url = %s, description = %s
-                            -- updated_at = CURRENT_TIMESTAMP (If not using DB trigger)
                         WHERE book_id = %s;
                     """
 
@@ -167,7 +157,7 @@ class Book:
                     query = """
                         INSERT INTO books (title, author, genre, price, stock_quantity, image_url, description)
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
-                        RETURNING book_id, created_at, updated_at; 
+                        RETURNING book_id; 
                     """
                     values = (self.title, self.author, self.genre, self.price, 
                               self.stock_quantity, self.image_url, self.description)
@@ -177,8 +167,6 @@ class Book:
 
                     if result_row:
                         self.book_id = result_row['book_id']
-                        self.created_at = result_row.get('created_at') # Get if returned by DB
-                        self.updated_at = result_row.get('updated_at') # Get if returned by DB
                     else:
                         logger.error("Failed to retrieve book_id and timestamps after insert.")
                         raise DatabaseError("Book insert failed to return generated ID and timestamps.")

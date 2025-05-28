@@ -1,0 +1,62 @@
+{# cs492_bookstore_project/app/templates/admin/dashboard.html #}
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - BookNook{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5"> {# Added mb-5 for spacing before footer #}
+    <div class="row mb-3">
+        <div class="col">
+            <h1 class="display-5 border-bottom pb-2 mb-3">Admin Dashboard</h1>
+            <p class="lead">{{ greeting|default('Welcome, Administrator!') }}</p>
+        </div>
+    </div>
+
+    <p class="text-muted">This is the central control panel for site administration. Use the sections below to manage various aspects of the bookstore.</p>
+
+    <hr class="my-4">
+
+    <div class="row gy-4"> {# gy-4 adds vertical gutter spacing between cards #}
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100"> {# h-100 for equal height cards in a row #}
+                <div class="card-body d-flex flex-column"> {# flex-column for button at bottom #}
+                    <h5 class="card-title">📖 Book Management</h5>
+                    <p class="card-text">Add new books, edit existing book details, manage stock levels, and view the complete inventory.</p>
+                    <a href="{{ url_for('admin.list_books') }}" class="btn btn-primary mt-auto">Manage Books</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">👥 User Management</h5>
+                    <p class="card-text">View all registered users, edit user roles and details, and manage user accounts (customers, employees, other admins).</p>
+                    <button class="btn btn-primary mt-auto" disabled>Manage Users (Coming Soon)</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">🛒 Order Overview</h5>
+                    <p class="card-text">View a comprehensive list of all customer orders, check their current processing status, and manage order fulfillment stages.</p>
+                    <button class="btn btn-primary mt-auto" disabled>View All Orders (Coming Soon)</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">🌟 Review Management</h5>
+                    <p class="card-text">View all customer reviews submitted for books and moderate content as necessary (e.g., remove inappropriate reviews).</p>
+                    <button class="btn btn-primary mt-auto" disabled>Manage Reviews (Coming Soon)</button>
+                </div>
+            </div>
+        </div>
+
+        </div>
+</div>
+{% endblock %}
