@@ -1,0 +1,147 @@
+{# cs492_bookstore_project/app/templates/admin/admin_user_form.html #}
+{% extends "base.html" %}
+
+{% block title %}Admin - {{ form_title|default('Manage User') }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <h1 class="display-6 mb-4 border-bottom pb-2">{{ form_title }}</h1>
+            
+            {# General form errors can be flashed or passed in a specific error context variable #}
+
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ action_url }}" novalidate>
+                        {# CSRF Token - if using Flask-WTF, include form.csrf_token here #}
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="first_name" class="form-label">First Name <span class="text-danger fw-bold">*</span></label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                       value="{{ user_form_data.get('first_name', '') }}" required maxlength="70">
+                                <div class="invalid-feedback">First name is required.</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="last_name" class="form-label">Last Name <span class="text-danger fw-bold">*</span></label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" 
+                                       value="{{ user_form_data.get('last_name', '') }}" required maxlength="70">
+                                <div class="invalid-feedback">Last name is required.</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address <span class="text-danger fw-bold">*</span></label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{{ user_form_data.get('email', '') }}" required maxlength="255"
+                                   aria-describedby="emailHelp">
+                            <div id="emailHelp" class="form-text">User's login email. Must be unique.</div>
+                            <div class="invalid-feedback">A valid email address is required.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="phone_number" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone_number" name="phone_number" 
+                                   value="{{ user_form_data.get('phone_number', '') }}"
+                                   aria-describedby="phoneHelp">
+                            <div id="phoneHelp" class="form-text">(Optional) e.g., XXX-XXX-XXXX</div>
+                        </div>
+                        
+                        {# Password field only for 'create' mode #}
+                        {% if form_mode == 'create' %}
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Initial Password <span class="text-danger fw-bold">*</span></label>
+                            <input type="password" class="form-control" id="password" name="password" required
+                                   aria-describedby="passwordHelpCreate">
+                            <div id="passwordHelpCreate" class="form-text">
+                                Set an initial password. Min 8 chars, with uppercase, lowercase, number, & special character.
+                            </div>
+                            <div class="invalid-feedback">An initial password meeting complexity requirements is required.</div>
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="role" class="form-label">Role <span class="text-danger fw-bold">*</span></label>
+                            <select class="form-select" id="role" name="role" required>
+                                <option value="" {% if not user_form_data.get('role') %}selected{% endif %} disabled>Select role...</option>
+                                <option value="customer" {% if user_form_data.get('role') == 'customer' %}selected{% endif %}>Customer</option>
+                                <option value="employee" {% if user_form_data.get('role') == 'employee' %}selected{% endif %}>Employee</option>
+                                <option value="admin" {% if user_form_data.get('role') == 'admin' %}selected{% endif %}>Admin</option>
+                            </select>
+                            <div class="invalid-feedback">Please select a role for the user.</div>
+                        </div>
+                        
+                        <h5 class="mt-4 mb-3 pt-3 border-top">Address Information (Optional)</h5>
+                        <div class="mb-3">
+                            <label for="address_line1" class="form-label">Address Line 1</label>
+                            <input type="text" class="form-control" id="address_line1" name="address_line1" 
+                                   value="{{ user_form_data.get('address_line1', '') }}" maxlength="100">
+                        </div>
+                        <div class="mb-3">
+                            <label for="address_line2" class="form-label">Address Line 2</label>
+                            <input type="text" class="form-control" id="address_line2" name="address_line2" 
+                                   value="{{ user_form_data.get('address_line2', '') }}" maxlength="100">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-5 mb-3">
+                                <label for="city" class="form-label">City</label>
+                                <input type="text" class="form-control" id="city" name="city" 
+                                       value="{{ user_form_data.get('city', '') }}" maxlength="70">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="state" class="form-label">State</label>
+                                <input type="text" class="form-control" id="state" name="state" 
+                                       value="{{ user_form_data.get('state', '') }}" maxlength="50">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="zip_code" class="form-label">Zip Code</label>
+                                <input type="text" class="form-control" id="zip_code" name="zip_code" 
+                                       value="{{ user_form_data.get('zip_code', '') }}" maxlength="20">
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin.list_users') }}" class="btn btn-outline-secondary">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle me-1" viewBox="0 0 16 16">
+                                  <path fill-rule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-4.5-.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H11.5z"/>
+                                </svg>
+                                Cancel & Back to User List
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle-fill me-1" viewBox="0 0 16 16">
+                                  <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                                </svg>
+                                {{ 'Update User' if form_mode == 'edit' else 'Create User' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+{{ super() }}
+<script>
+    // Basic Bootstrap client-side validation (shows HTML5 messages)
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('form[novalidate]')
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })
+    })()
+</script>
+{% endblock %}
+{% endblock %}

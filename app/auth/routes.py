@@ -79,7 +79,7 @@ def register():
             registration_payload['confirm_password'] = form_data_raw.get('confirm_password', '')
             # Ensure 'role' is included; it might be from a select and not need escaping other than stripping.
             # If not escaped by sanitize_form_data, it's passed as is (after stripping).
-            registration_payload['role'] = form_data_raw.get('role', 'customer') # Default role
+            registration_payload['role'] = 'customer' # Default role
 
             logger.debug(f"Sanitized registration payload (pre-validation): { {k:v for k,v in registration_payload.items() if k != 'password' and k != 'confirm_password'} }")
 

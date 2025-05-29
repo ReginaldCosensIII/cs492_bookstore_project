@@ -1,9 +1,10 @@
 # app/models/user.py
 
+from datetime import datetime                       # For type hinting
+from app.logger import get_logger                   # Use the app's configured logger
+from flask_login import UserMixin                   # Provides default implementations for Flask-Login User methods
+from typing import Dict, Any, Optional
 from app.models.db import get_db_connection
-from datetime import datetime # For type hinting
-from app.logger import get_logger # Use the app's configured logger
-from flask_login import UserMixin # Provides default implementations for Flask-Login User methods
 
 # Use the app's configured logger
 logger = get_logger(__name__)
@@ -29,12 +30,13 @@ class User(UserMixin):
         state (str, optional): User's shipping state.
         zip_code (str, optional): User's shipping ZIP code.
         role (str): The role of the user (e.g., 'customer', 'admin', 'employee').
+        is_active (bool): Whether the user account is active. Defaults to True.
     """
     def __init__(self, user_id: int, email: str, password_hash: str, 
                  first_name: str, last_name: str, role: str,
                  phone_number: str = None, created_at: datetime = None, 
                  address_line1: str = None, address_line2: str = None,
-                 city: str = None, state: str = None, zip_code: str = None):
+                 city: str = None, state: str = None, zip_code: str = None, is_active: bool = True):
         """
         Initializes a new User instance.
 
@@ -52,29 +54,49 @@ class User(UserMixin):
             city (str, optional): City. Defaults to None.
             state (str, optional): State. Defaults to None.
             zip_code (str, optional): ZIP code. Defaults to None.
+            is_active (bool): Whether the user account is active. Defaults to True.
+
         """
+        try:
+            self.id = int(user_id)
+        except (ValueError, TypeError):
+            logger.error(f"Invalid user_id for the User init: {user_id}", exc_info=True)
+
+            raise ValueError("User ID must be a valid integer")
+        
         self.id = int(user_id) # Flask-Login expects 'id' attribute, ensure it's correct type
         self.user_id = int(user_id) 
-        self.email = email
-        self.phone_number = phone_number
+        self.email = str(email) if email is not None else ""
+        self.password_hash = str(password_hash) if password_hash is not None else ""
         self.password_hash = password_hash # Store the hash directly
+        self.phone_number = str(phone_number).strip() if phone_number else None
         self.created_at = created_at
-        self.first_name = first_name
-        self.last_name = last_name
-        self.address_line1 = address_line1
-        self.address_line2 = address_line2
-        self.city = city
-        self.state = state
-        self.zip_code = zip_code
-        self.role = role if role else 'customer' # Default role to customer if not specified
+        self.first_name = str(first_name).title() if first_name else None # Store title-cased or None
+        self.last_name = str(last_name).title() if last_name else None   # Store title-cased or None
+        self.address_line1 = str(address_line1) if address_line1 is not None else None
+        self.address_line2 = str(address_line2) if address_line2 is not None else None
+        self.city = str(city).title() if city else None                 # Store title-cased or None
+        self.state = str(state).upper() if state else None              # Store uppercase or None
+        self.zip_code = str(zip_code) if zip_code is not None else None
+        self.role = str(role).lower() if role else 'customer' 
+        self._is_active = bool(is_active) 
 
-        logger.debug(f"User object initialized: ID={self.id}, Email='{self.email}', Role='{self.role}'")
+        logger.debug(f"User object initialized: ID={self.id}, Email='{self.email}', Role='{self.role}', Active={self.is_active}")
 
     # get_id() is required by Flask-Login and should return a string representation of the user's unique ID.
     # UserMixin provides a default implementation that uses self.id.
     # def get_id(self):
     #     return str(self.id)
     
+    @property
+    def is_active(self) -> bool:
+        """
+        Property required by Flask-Login UserMixin.
+        Returns True if the user's account is active (based on `self._is_active`), 
+        False otherwise. This overrides the default UserMixin.is_active behavior.
+        """
+        return self._is_active
+
     # Role checking helper methods for convenience in templates and routes
     def is_admin(self) -> bool:
         """Checks if the user has the 'admin' role."""
@@ -123,8 +145,48 @@ class User(UserMixin):
             state=row_dict.get('state'),
             zip_code=row_dict.get('zip_code'),
             role=row_dict.get('role', 'customer'), # Default to 'customer' if role is missing
-            phone_number=row_dict.get('phone_number')
+            phone_number=row_dict.get('phone_number'),
+            is_active=row_dict.get('is_active', True) # Get is_active from DB, default to True if missing
         )
+
+    def to_dict(self, include_sensitive: bool = False) -> Dict[str, Any]:
+        """
+        Returns a dictionary representation of the User object.
+        Useful for pre-filling forms or serializing user data (e.g., for an API).
+        By default, it defaults None string values to empty strings for form pre-filling.
+
+        Args:
+            include_sensitive (bool): If True, includes potentially sensitive fields like
+                                      `password_hash`. Defaults to False. For form pre-filling
+                                      or general API responses, this should typically be False.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the user's attributes.
+                            `created_at` is returned as an ISO 8601 formatted string if present.
+        """
+        data = {
+            'user_id': self.user_id,
+            'id': self.id, # Common alias, useful for Flask-Login context
+            'email': self.email or "", # Default None to empty string
+            'first_name': self.first_name or "",
+            'last_name': self.last_name or "",
+            'phone_number': self.phone_number or "",
+            'address_line1': self.address_line1 or "",
+            'address_line2': self.address_line2 or "",
+            'city': self.city or "",
+            'state': self.state or "",
+            'zip_code': self.zip_code or "",
+            'role': self.role,
+            'is_active': self.is_active, # Uses the property
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+        if include_sensitive:
+            data['password_hash'] = self.password_hash # Only include if explicitly needed
+        
+        # Log selectively, excluding password_hash from general debug logs
+        log_data_safe = {k:v for k,v in data.items() if k != 'password_hash'}
+        logger.debug(f"User.to_dict() called for user ID {self.id}. Safe data: {log_data_safe}")
+        return data
 
 def load_user(user_id_str: str): # Renamed in app/__init__ to _flask_login_user_loader for clarity
     """
@@ -158,7 +220,7 @@ def load_user(user_id_str: str): # Renamed in app/__init__ to _flask_login_user_
             cur.execute("""
                 SELECT user_id, email, phone_number, password, created_at,
                        first_name, last_name, address_line1, address_line2,
-                       city, state, zip_code, role
+                       city, state, zip_code, role, is_active
                 FROM users
                 WHERE user_id = %s
             """, (user_id_int,))

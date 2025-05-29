@@ -40,14 +40,14 @@ def authenticate_user(email: str, password_input: str) -> Optional[User]:
 
     try:
         conn = get_db_connection() # Establishes a new DB connection
-        # Cursors from this connection use RealDictCursor by default (as per db.py).
 
+        # Cursors from this connection use RealDictCursor by default (as per db.py).
         with conn.cursor() as cur:
             # SQL query to select all necessary fields for User object instantiation.
             cur.execute("""
                 SELECT user_id, email, phone_number, password, created_at,
                        first_name, last_name, address_line1, address_line2,
-                       city, state, zip_code, role
+                       city, state, zip_code, role, is_active
                 FROM users
                 WHERE email = %s
             """, (email,))
@@ -58,9 +58,17 @@ def authenticate_user(email: str, password_input: str) -> Optional[User]:
             # User with the given email was found; now verify the password.
             # user_data_dict["password"] should contain the hashed password from the database.
             if check_password_hash(user_data_dict["password"], password_input):
-                logger.info(f"Service: User '{email}' authenticated successfully. Role: {user_data_dict.get('role')}")
+
+                if not user_data_dict.get('is_active', False): # Default to inactive if somehow missing for safety
+                    logger.warning(f"Authentication failed for email '{email}': Account is inactive.")
+
+                    raise AuthenticationError("Your account is currently inactive. Please contact support.")
+                
+                logger.info(f"Service: User '{email}' authenticated successfully. Role: {user_data_dict.get('role')}, Active: True")
+
                 # Create and return a User object using data from the database.
-                return User.from_db_row(user_data_dict) 
+                return User.from_db_row(user_data_dict)
+            
             else:
                 # Password does not match the stored hash.
                 logger.warning(f"Service: Authentication failed for email '{email}': Invalid password provided.")
