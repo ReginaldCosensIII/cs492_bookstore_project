@@ -30,16 +30,17 @@ complex business rules, including transaction management where necessary.
 # from .book_service import get_all_books, get_book_by_id
 # from .order_service import create_order_from_cart, get_orders_by_user, get_order_details
 # from .reg_service import register_user, validate_registration_data
-# from .review_service import (
-#     get_reviews_by_book, add_review, update_review,
-#     delete_review_if_owner, get_user_review_for_book
+# from .user_service import (
+#    admin_get_all_users, admin_get_user_by_id, 
+#    admin_disable_user, admin_enable_user,
+#    admin_create_user, admin_update_user_details # Add new functions
 # )
 #
 # And then define __all__ if you intend for `from app.services import *` to work predictably:
 # __all__ = [
-#     'authenticate_user',
-#     'get_all_books', 'get_book_by_id',
-#     # ... other explicitly exported names ...
+#     # ... other existing service functions ...
+#     'admin_get_all_users', 'admin_get_user_by_id',
+#     'admin_disable_user', 'admin_enable_user',
 # ]
 #
 # However, explicit imports from the specific service modules (e.g., 

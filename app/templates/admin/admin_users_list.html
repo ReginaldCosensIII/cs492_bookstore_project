@@ -1,0 +1,221 @@
+{# cs492_bookstore_project/app/templates/admin/admin_users_list.html #}
+{% extends "base.html" %}
+
+{% block title %}Admin - Manage Users{% endblock %}
+
+{% block head_extra %}
+<style>
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    .role-badge {
+        font-size: 0.8em;
+        padding: 0.3em 0.6em;
+    }
+    .role-admin { background-color: #dc3545; color: white; } /* Bootstrap danger */
+    .role-employee { background-color: #ffc107; color: black; } /* Bootstrap warning */
+    .role-customer { background-color: #0d6efd; color: white; } /* Bootstrap primary */
+    .status-active { color: green; font-weight: bold; }
+    .status-inactive { color: red; font-weight: bold; }
+    
+    /* Styles for filter form and sortable table headers */
+    .filter-form .form-control, .filter-form .form-select {
+        display: inline-block; /* Or use Bootstrap's form-inline concepts if preferred */
+        width: auto;
+        vertical-align: middle;
+    }
+    .table th a {
+        text-decoration: none;
+        color: inherit; /* Inherit color from table header */
+    }
+    .table th a:hover {
+        color: #007bff; /* Or your primary link color */
+        text-decoration: underline;
+    }
+    .sort-indicator {
+        margin-left: 5px;
+        font-size: 0.8em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+        <h1 class="display-6 mb-0">Manage Users</h1>
+        <a href="{{ url_for('admin.create_user') }}" class="btn btn-success">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-plus-fill me-1" viewBox="0 0 16 16">
+                <path d="M1 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                <path fill-rule="evenodd" d="M13.5 5a.5.5 0 0 1 .5.5V7h1.5a.5.5 0 0 1 0 1H14v1.5a.5.5 0 0 1-1 0V8h-1.5a.5.5 0 0 1 0-1H13V5.5a.5.5 0 0 1 .5-.5z"/>
+            </svg>
+            Create New User
+        </a>
+    </div>
+
+    {# --- Filter and Search Form --- #}
+    <form method="GET" action="{{ url_for('admin.list_users') }}" class="row g-3 mb-4 p-3 border rounded bg-light filter-form shadow-sm align-items-end">
+        <div class="col-md-4">
+            <label for="search_email" class="form-label small mb-1">Search Email</label>
+            <input type="text" class="form-control form-control-sm" id="search_email" name="search_email" 
+                   value="{{ current_search_email or '' }}" placeholder="Email contains...">
+        </div>
+        <div class="col-md-3">
+            <label for="role_filter" class="form-label small mb-1">Filter by Role</label>
+            <select class="form-select form-select-sm" id="role_filter" name="role">
+                <option value="all" {% if current_role_filter == 'all' %}selected{% endif %}>All Roles</option>
+                <option value="customer" {% if current_role_filter == 'customer' %}selected{% endif %}>Customer</option>
+                <option value="employee" {% if current_role_filter == 'employee' %}selected{% endif %}>Employee</option>
+                <option value="admin" {% if current_role_filter == 'admin' %}selected{% endif %}>Admin</option>
+            </select>
+        </div>
+        {# Pass through current sort parameters if they exist so they are not lost when filtering #}
+        {% if current_sort_by %}<input type="hidden" name="sort_by" value="{{ current_sort_by }}">{% endif %}
+        {% if current_sort_order %}<input type="hidden" name="sort_order" value="{{ current_sort_order }}">{% endif %}
+
+        <div class="col-md-auto">
+            <button type="submit" class="btn btn-primary btn-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search me-1" viewBox="0 0 16 16">
+                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                </svg>Filter/Search
+            </button>
+        </div>
+        <div class="col-md-auto">
+            {# Clear button should ideally clear all filters and sort back to default #}
+            <a href="{{ url_for('admin.list_users') }}" class="btn btn-outline-secondary btn-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle me-1" viewBox="0 0 16 16">
+                  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                  <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                </svg>Clear All
+            </a>
+        </div>
+    </form>
+    {# --- End Filter and Search Form --- #}
+
+    {% if users %}
+        <div class="table-responsive shadow-sm rounded">
+            <table class="table table-striped table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        {# --- Clickable Table Headers for Sorting --- #}
+                        {# For each sortable column, create a link that toggles sort_order #}
+                        {% set next_sort_order_id = 'desc' if current_sort_by == 'id' and current_sort_order == 'asc' else 'asc' %}
+                        <th scope="col" style="width: 5%;">
+                            <a href="{{ url_for('admin.list_users', role=current_role_filter, search_email=current_search_email, sort_by='id', sort_order=next_sort_order_id) }}">
+                                ID
+                                {% if current_sort_by == 'id' %}
+                                    <span class="sort-indicator">{{ '▲' if current_sort_order == 'asc' else '▼' }}</span>
+                                {% endif %}
+                            </a>
+                        </th>
+                        
+                        {% set next_sort_order_name = 'desc' if current_sort_by == 'name' and current_sort_order == 'asc' else 'asc' %}
+                        <th scope="col" style="width: 20%;">
+                            <a href="{{ url_for('admin.list_users', role=current_role_filter, search_email=current_search_email, sort_by='name', sort_order=next_sort_order_name) }}">
+                                Name
+                                {% if current_sort_by == 'name' %}
+                                    <span class="sort-indicator">{{ '▲' if current_sort_order == 'asc' else '▼' }}</span>
+                                {% endif %}
+                            </a>
+                        </th>
+
+                        {% set next_sort_order_email = 'desc' if current_sort_by == 'email' and current_sort_order == 'asc' else 'asc' %}
+                        <th scope="col" style="width: 25%;">
+                            <a href="{{ url_for('admin.list_users', role=current_role_filter, search_email=current_search_email, sort_by='email', sort_order=next_sort_order_email) }}">
+                                Email
+                                {% if current_sort_by == 'email' %}
+                                    <span class="sort-indicator">{{ '▲' if current_sort_order == 'asc' else '▼' }}</span>
+                                {% endif %}
+                            </a>
+                        </th>
+
+                        {% set next_sort_order_role = 'desc' if current_sort_by == 'role' and current_sort_order == 'asc' else 'asc' %}
+                        <th scope="col" style="width: 10%;">
+                            <a href="{{ url_for('admin.list_users', role=current_role_filter, search_email=current_search_email, sort_by='role', sort_order=next_sort_order_role) }}">
+                                Role
+                                {% if current_sort_by == 'role' %}
+                                    <span class="sort-indicator">{{ '▲' if current_sort_order == 'asc' else '▼' }}</span>
+                                {% endif %}
+                            </a>
+                        </th>
+
+                        {% set next_sort_order_status = 'desc' if current_sort_by == 'status' and current_sort_order == 'asc' else 'asc' %}
+                        <th scope="col" class="text-center" style="width: 10%;">
+                             <a href="{{ url_for('admin.list_users', role=current_role_filter, search_email=current_search_email, sort_by='status', sort_order=next_sort_order_status) }}">
+                                Status
+                                {% if current_sort_by == 'status' %}
+                                    <span class="sort-indicator">{{ '▲' if current_sort_order == 'asc' else '▼' }}</span>
+                                {% endif %}
+                            </a>
+                        </th>
+
+                        {% set next_sort_order_joined = 'desc' if current_sort_by == 'joined' and current_sort_order == 'asc' else 'asc' %}
+                        <th scope="col" style="width: 10%;">
+                           <a href="{{ url_for('admin.list_users', role=current_role_filter, search_email=current_search_email, sort_by='joined', sort_order=next_sort_order_joined) }}">
+                                Last Updated
+                                {% if current_sort_by == 'joined' %}
+                                    <span class="sort-indicator">{{ '▲' if current_sort_order == 'asc' else '▼' }}</span>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th scope="col" class="text-center" style="width: 15%;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user_obj in users %}
+                    <tr>
+                        <th scope="row">{{ user_obj.user_id }}</th>
+                        <td>{{ user_obj.first_name.title() if user_obj.first_name else '' }} {{ user_obj.last_name.title() if user_obj.last_name else '' }}</td>
+                        <td>{{ user_obj.email }}</td>
+                        <td>
+                            {% if user_obj.role == 'admin' %}<span class="badge role-badge role-admin">Admin</span>
+                            {% elif user_obj.role == 'employee' %}<span class="badge role-badge role-employee">Employee</span>
+                            {% elif user_obj.role == 'customer' %}<span class="badge role-badge role-customer">Customer</span>
+                            {% else %}<span class="badge bg-secondary role-badge">{{ user_obj.role|title if user_obj.role else 'N/A' }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if user_obj.is_active %}
+                                <span class="badge bg-success-subtle text-success-emphasis rounded-pill status-active">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger-subtle text-danger-emphasis rounded-pill status-inactive">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user_obj.created_at.strftime('%Y-%m-%d') if user_obj.created_at else 'N/A' }}</td>
+                        <td class="text-center">
+                            <a href="{{ url_for('admin.edit_user', user_id_to_edit=user_obj.user_id) }}" class="btn btn-sm btn-outline-primary me-1 mb-1" title="Edit User">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                                    <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                                    <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
+                                </svg> Edit
+                            </a>
+                            {% if user_obj.id != current_user.id %}
+                                {% if user_obj.is_active %}
+                                <form action="{{ url_for('admin.disable_user', user_id_to_disable=user_obj.user_id) }}" method="POST" class="d-inline" 
+                                      onsubmit="return confirm('Disable user: {{ user_obj.email|e }}? They will not be able to log in.');">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning mb-1" title="Disable User Account">Disable</button>
+                                </form>
+                                {% else %}
+                                <form action="{{ url_for('admin.enable_user', user_id_to_enable=user_obj.user_id) }}" method="POST" class="d-inline"
+                                      onsubmit="return confirm('Re-enable user: {{ user_obj.email|e }}?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-success mb-1" title="Enable User Account">Enable</button>
+                                </form>
+                                {% endif %}
+                            {% else %}<span class="text-muted small">(Current Admin)</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info mt-3" role="alert">
+            No users found matching your criteria. 
+            <a href="{{ url_for('admin.create_user') }}" class="alert-link">Create a new user?</a>
+            {% if current_role_filter != 'all' or current_search_email %} {# Show clear only if filters are active #}
+                <a href="{{ url_for('admin.list_users') }}" class="ms-2">Clear filters/search</a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

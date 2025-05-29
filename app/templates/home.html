@@ -5,7 +5,7 @@
 {% block content %}
 {% if not current_user.is_authenticated %}
     <div class="alert alert-info mt-3" role="alert">
-      Welcome to BookNook! Please <a href="{{ url_for('auth.login') }}" class="alert-link">log in</a> or <a href="{{ url_for('auth.register') }}" class="alert-link">register</a> to leave reviews, manage your cart, and view your orders.
+      <p align="center">Welcome to BookNook! Please <a href="{{ url_for('auth.login') }}" class="alert-link">log in</a> or <a href="{{ url_for('auth.register') }}" class="alert-link">register</a> to leave reviews, and view your orders.</p>
     </div>
 {% endif %}
 

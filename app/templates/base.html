@@ -110,7 +110,7 @@
                     <div class="col-md-10 col-lg-8">
                         {% for category, message in messages %}
                             <div class="alert alert-{{ category if category in ['success', 'danger', 'warning', 'info'] else 'secondary' }} alert-dismissible fade show" role="alert">
-                                {{ message }}
+                                <p><center>{{message}}</center></p>
                                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
                         {% endfor %}

@@ -126,9 +126,9 @@ def validate_registration_data(form_data: Dict[str, Any]) -> List[str]:
 
 def register_user(user_data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Registers a new user in the database.
-    Assumes `user_data` has passed preliminary validation via `validate_registration_data`.
-    Handles password hashing and database insertion for the new user.
+    Registers a new user in the database. Assumes `user_data` has passed preliminary validation 
+    via `validate_registration_data`. Handles password hashing and database insertion for the new user.
+    New users are created with 'is_active = True' by DB default
 
     Args:
         user_data (Dict[str, Any]): Validated user registration data. Required keys: 
@@ -222,7 +222,7 @@ def register_user(user_data: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_user_by_email(email: str) -> Optional[User]:
     """
-    Retrieves a user from the database by their email address.
+    Retrieves a user from the database by their email address. Includes 'is_active' status.
     Email search is case-insensitive (assumes DB index on LOWER(email) or email stored lowercase).
 
     Args:
@@ -244,14 +244,14 @@ def get_user_by_email(email: str) -> Optional[User]:
             cur.execute("""
                 SELECT user_id, email, phone_number, password, created_at,
                        first_name, last_name, address_line1, address_line2,
-                       city, state, zip_code, role
+                       city, state, zip_code, role, is_active
                 FROM users WHERE email = %s 
             """, (email,))
 
             user_row_dict = cur.fetchone()
         
         if user_row_dict:
-            logger.debug(f"User found by email '{email}': ID {user_row_dict.get('user_id')}")
+            logger.debug(f"User found by email '{email}': ID {user_row_dict.get('user_id')}, Active: {user_row_dict.get('is_active')}")
 
             return User.from_db_row(user_row_dict)
         
