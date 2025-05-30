@@ -1,146 +1,200 @@
+{# cs492_bookstore_project/app/templates/home.html #}
 {% extends "base.html" %}
 
 {% block title %}Home - BookNook{% endblock %}
 
 {% block content %}
-{% if not current_user.is_authenticated %}
-    <div class="alert alert-info mt-3" role="alert">
-      <p align="center">Welcome to BookNook! Please <a href="{{ url_for('auth.login') }}" class="alert-link">log in</a> or <a href="{{ url_for('auth.register') }}" class="alert-link">register</a> to leave reviews, and view your orders.</p>
-    </div>
-{% endif %}
+<div class="container mt-4 mb-5"> {# Added mb-5 for consistency #}
+    {% if not current_user.is_authenticated %}
+        <div class="alert alert-info mt-3 shadow-sm" role="alert">
+            <p class="text-center mb-0">
+                Welcome to BookNook! Please 
+                <a href="{{ url_for('auth.login', next=request.url) }}" class="alert-link fw-bold">log in</a> or 
+                <a href="{{ url_for('auth.register') }}" class="alert-link fw-bold">register</a> 
+                to leave reviews, save your cart, and view your order history.
+            </p>
+        </div>
+    {% endif %}
 
-<div class="pt-4 pb-3 mb-3 bg-light rounded-3 text-center"> 
-    <div class="container-fluid py-3"> 
-        <h1 class="display-6 fw-bold">Discover Your Next Favorite Book</h1> 
-        <p class="fs-5">Browse our vast collection of titles across all genres.</p> 
+    <div class="pt-4 pb-3 mb-4 bg-light rounded-3 text-center shadow-sm"> 
+        <div class="container-fluid py-3"> 
+            <h1 class="display-5 fw-bold">Discover Your Next Favorite Book</h1> 
+            <p class="fs-5 text-muted">Browse our vast collection of titles across all genres.</p> 
+        </div>
     </div>
-</div>
 
-<h2 id="books-section" class="mb-3 text-center">Available Books</h2>
-<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-    {% for book_obj in books %}
-        {% set current_book_id_str = book_obj.book_id | string %}
-        <div class="col d-flex align-items-stretch">
-            <div class="card h-100 shadow-sm w-100">
-                <div class="row g-0 h-100">
-                    <div class="col-md-4 d-flex align-items-center justify-content-center p-3">
-                        <img src="{{ book_obj.image_url }}"
-                             class="img-fluid rounded-start"
-                             alt="Cover of {{ book_obj.title.title() }}"
-                             style="max-height: 200px; object-fit: contain;">
-                    </div>
-                    <div class="col-md-8">
-                        <div class="card-body d-flex flex-column">
-                            <div>
-                                <h5 class="card-title">{{ book_obj.title.title() }}</h5>
-                                <p class="card-text text-muted small">by {{ book_obj.author }}</p>
-                                <p class="card-text fs-5 fw-bold text-primary">${{ "%.2f"|format(book_obj.price) }}</p>
+    {# --- Include the book filter/sort form --- #}
+    {# Ensure home() route passes 'genres', 'current_filters', and 'action_url' #}
+    {% if genres is defined and current_filters is defined and action_url is defined %}
+        {% include "_book_filters.html" with context %}
+    {% else %}
+        <p class="text-danger">Book filters could not be loaded at this time. Please ensure route variables are set.</p>
+    {% endif %}
+
+    <h2 id="books-section" class="mb-4 text-center mt-4">Available Books</h2>
+    
+    {% if books %}
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-3 g-4"> {# Note: Your customer.html uses row-cols-lg-3 #}
+            {# The 'books' variable here is a list of Book OBJECTS from the route #}
+            {% for book_obj in books %} 
+                {% set current_book_id_str = book_obj.book_id | string if book_obj and book_obj.book_id is defined else 'unknown_id' %}
+                
+                {# --- Start of Embedded Book Card & Its Modal (Structure from your customer.html) --- #}
+                <div class="col d-flex align-items-stretch">
+                    <div class="card h-100 shadow-sm w-100">
+                        <div class="row g-0 h-100">
+                            <div class="col-md-4 d-flex align-items-center justify-content-center p-3">
+                                <img src="{{ book_obj.image_url or url_for('static', filename='images/placeholder_book.png') }}"
+                                     class="img-fluid rounded-start"
+                                     alt="Cover of {{ book_obj.title.title() if book_obj.title else 'Book' }}"
+                                     style="max-height: 200px; object-fit: contain;"
+                                     onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/placeholder_book_error.png') }}';">
                             </div>
-                            <div class="mt-auto pt-2">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <button class="btn btn-primary btn-sm" onclick="openBookReviewModal('{{ current_book_id_str }}')"> 
-                                        + Details
-                                    </button>
-                                    <div class="input-group input-group-sm" style="max-width: 130px;">
-                                        <input type="number" id="quantity-{{ current_book_id_str }}" class="form-control text-center" value="1" min="1" aria-label="Quantity for {{ book_obj.title.title() }}">
-                                        <button class="btn btn-success btn-sm" type="button" onclick="addToCart('{{ current_book_id_str }}', this)">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart-plus-fill" viewBox="0 0 16 16">
-                                                <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1H.5zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM9 5.5V7h1.5a.5.5 0 0 1 0 1H9v1.5a.5.5 0 0 1-1 0V8H6.5a.5.5 0 0 1 0-1H8V5.5a.5.5 0 0 1 1 0z"/>
-                                            </svg> Add
-                                        </button>
+                            <div class="col-md-8">
+                                <div class="card-body d-flex flex-column">
+                                    <div>
+                                        <h5 class="card-title">{{ book_obj.title.title() if book_obj.title else 'Untitled Book' }}</h5>
+                                        <p class="card-text text-muted small">by {{ book_obj.author if book_obj.author else 'Unknown Author' }}</p>
+                                        <p class="card-text fs-5 fw-bold text-primary">
+                                            ${{ "%.2f"|format(book_obj.price if book_obj.price is not none else 0.00) }}
+                                        </p>
+                                    </div>
+                                    <div class="mt-auto pt-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            {# Button from your customer.html, using data-bs-target to unique modal ID #}
+                                            <button class="btn btn-primary btn-sm" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#bookModal{{ current_book_id_str }}"
+                                                    onclick="openBookReviewModal('{{ current_book_id_str }}')"> 
+                                                +Details
+                                            </button>
+                                            <div class="input-group input-group-sm" style="max-width: 130px;">
+                                                <input type="number" id="quantity-{{ current_book_id_str }}" class="form-control text-center" 
+                                                       value="1" min="1" 
+                                                       aria-label="Quantity for {{ book_obj.title.title() if book_obj.title else 'Book' }}">
+                                                <button class="btn btn-success btn-sm" type="button" 
+                                                        onclick="addToCart('{{ current_book_id_str }}', document.getElementById('quantity-{{ current_book_id_str }}'))">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart-plus-fill" viewBox="0 0 16 16">
+                                                        <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1H.5zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM9 5.5V7h1.5a.5.5 0 0 1 0 1H9v1.5a.5.5 0 0 1-1 0V8H6.5a.5.5 0 0 1 0-1H8V5.5a.5.5 0 0 1 1 0z"/>
+                                                    </svg> Add
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {# Your customer.html had 'action-message-container w-100'. Let's match that if it's important for styling. #}
+                                        {# Otherwise, the ID 'action-message-{{ current_book_id_str }}' is targeted by JS. #}
+                                        <div id="action-message-{{ current_book_id_str }}" class="action-message small mt-1 text-center w-100" style="min-height: 1.2em;"></div>
                                     </div>
                                 </div>
-                                <div id="action-message-{{ current_book_id_str }}" class="action-message small mt-1 text-center"></div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="modal fade" id="bookModal{{ current_book_id_str }}" tabindex="-1" aria-labelledby="bookModalLabel{{ current_book_id_str }}" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="bookModalLabel{{ current_book_id_str }}">{{ book_obj.title.title() }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="d-flex flex-column flex-md-row">
-                            <img src="{{ book_obj.image_url }}"
-                                 id="modalBookImage{{ current_book_id_str }}"
-                                 class="me-md-3 mb-3 mb-md-0"
-                                 style="width: 200px; max-height: 300px; object-fit: contain;" alt="Cover of {{ book_obj.title.title() }}">
-                            <div class="flex-grow-1">
-                                <p><strong>Author:</strong> <span id="modalBookAuthor{{ current_book_id_str }}">{{ book_obj.author }}</span></p>
-                                <p><strong>Price:</strong> <span id="modalBookPrice{{ current_book_id_str }}">${{ "%.2f"|format(book_obj.price) }}</span></p>
-                                <p><strong>Description:</strong></p>
-                                <p><span id="modalBookDescription{{ current_book_id_str }}">{{ book_obj.description }}</span></p>
-                                
-                                <hr>
-                                <h6>Reviews:</h6>
-                                <div id="reviewsContainer{{ current_book_id_str }}" style="max-height: 200px; overflow-y: auto;">
-                                    <p class="text-muted p-3">Loading reviews...</p>
-                                </div>
+                <div class="modal fade" id="bookModal{{ current_book_id_str }}" tabindex="-1" aria-labelledby="bookModalLabel{{ current_book_id_str }}" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="bookModalLabel{{ current_book_id_str }}">{{ book_obj.title.title() if book_obj.title else 'Book Details' }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body"> {# Removed d-flex from here, let content flow naturally #}
+                                <div class="container-fluid">
+                                    <div class="row">
+                                        <div class="col-md-4 text-center mb-3 mb-md-0">
+                                            <img src="{{ book_obj.image_url or url_for('static', filename='images/placeholder_book.png') }}"
+                                                 class="img-fluid rounded mb-3" {# Removed id as it's less critical if content is static here #}
+                                                 style="max-height: 300px; object-fit: contain;" 
+                                                 alt="Cover of {{ book_obj.title.title() if book_obj.title else 'Book' }}"
+                                                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/placeholder_book_error.png') }}';">
+                                            {# Replicating your customer.html modal structure more closely #}
+                                            <h6 class="mb-1">{{ book_obj.title.title() if book_obj.title else 'Untitled Book' }}</h6>
+                                            <p class="small text-muted mb-1">by {{ book_obj.author if book_obj.author else 'Unknown Author' }}</p>
+                                            <p class="fs-5 fw-bold text-primary mb-2">${{ "%.2f"|format(book_obj.price if book_obj.price is not none else 0.00) }}</p>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <p><strong>Description:</strong></p>
+                                            {# Removed span and id, direct output is fine here #}
+                                            <p style="white-space: pre-wrap;">{{ book_obj.description or "No description available." }}</p>
+                                            <hr>
+                                            <h6>Reviews:</h6>
+                                            {# Unique ID for this specific modal's review container #}
+                                            <div id="reviewsContainer{{ current_book_id_str }}" style="max-height: 200px; overflow-y: auto;">
+                                                <p class="text-muted p-3 text-center">Loading reviews...</p> {# JS will replace this #}
+                                            </div>
 
-                                {% if current_user.is_authenticated %}
-                                    <hr>
-                                    <div id="addReviewSection{{ current_book_id_str }}">
-                                        <h6>Leave or Update Your Review:</h6>
-                                        <form id="reviewForm{{ current_book_id_str }}" onsubmit="handleReviewSubmit('{{ current_book_id_str }}', event)">
-                                            <div class="mb-3">
-                                                <label for="rating{{ current_book_id_str }}" class="form-label">Rating:</label>
-                                                <select class="form-select form-select-sm" id="rating{{ current_book_id_str }}" name="rating" required>
-                                                    <option value="" selected disabled>Choose a rating</option>
-                                                    <option value="5">&#9733;&#9733;&#9733;&#9733;&#9733; (Excellent)</option>
-                                                    <option value="4">&#9733;&#9733;&#9733;&#9733;&#9734; (Good)</option>
-                                                    <option value="3">&#9733;&#9733;&#9733;&#9734;&#9734; (Average)</option>
-                                                    <option value="2">&#9733;&#9733;&#9734;&#9734;&#9734; (Fair)</option>
-                                                    <option value="1">&#9733;&#9734;&#9734;&#9734;&#9734; (Poor)</option>
-                                                </select>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="comment{{ current_book_id_str }}" class="form-label">Comment:</label>
-                                                <textarea class="form-control form-control-sm" id="comment{{ current_book_id_str }}" name="comment" rows="3" placeholder="Share your thoughts..."></textarea>
-                                            </div>
-                                            <button type="submit" class="btn btn-success btn-sm">Submit Review</button>
-                                            <div id="reviewFormMessage{{ current_book_id_str }}" class="mt-2 small"></div>
-                                        </form>
+                                            {% if current_user.is_authenticated %}
+                                                <hr>
+                                                {# Unique ID for this specific modal's add review section and form #}
+                                                <div id="addReviewSection{{ current_book_id_str }}">
+                                                    <h6 class="mt-3">Leave or Update Your Review:</h6>
+                                                    <form id="reviewForm{{ current_book_id_str }}" onsubmit="handleReviewSubmit('{{ current_book_id_str }}', event)">
+                                                        <input type="hidden" name="book_id" value="{{ current_book_id_str }}">
+                                                        <div class="mb-2"> {# Was mb-3 in your customer.html, adjusted for consistency #}
+                                                            <label for="rating{{ current_book_id_str }}" class="form-label small">Rating:</label>
+                                                            <select class="form-select form-select-sm" id="rating{{ current_book_id_str }}" name="rating" required>
+                                                                <option value="" selected disabled>Choose a rating</option>
+                                                                <option value="5">&#9733;&#9733;&#9733;&#9733;&#9733; (Excellent)</option>
+                                                                <option value="4">&#9733;&#9733;&#9733;&#9733;&#9734; (Good)</option>
+                                                                <option value="3">&#9733;&#9733;&#9733;&#9734;&#9734; (Average)</option>
+                                                                <option value="2">&#9733;&#9733;&#9734;&#9734;&#9734; (Fair)</option>
+                                                                <option value="1">&#9733;&#9734;&#9734;&#9734;&#9734; (Poor)</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="mb-2"> {# Was mb-3 in your customer.html #}
+                                                            <label for="comment{{ current_book_id_str }}" class="form-label small">Comment:</label>
+                                                            <textarea class="form-control form-control-sm" id="comment{{ current_book_id_str }}" name="comment" rows="3" placeholder="Share your thoughts... (optional)"></textarea>
+                                                        </div>
+                                                        <button type="submit" class="btn btn-success btn-sm">Submit Review</button>
+                                                        <div id="reviewFormMessage{{ current_book_id_str }}" class="mt-2 small"></div>
+                                                    </form>
+                                                </div>
+                                            {% else %}
+                                                <hr>
+                                                <p class="mt-3 small">
+                                                    <em><a href="{{ url_for('auth.login', next=request.url) }}">Log in</a> to leave or edit a review.</em>
+                                                </p>
+                                            {% endif %}
+                                        </div>
                                     </div>
-                                {% else %}
-                                    <hr>
-                                    <p class="mt-3">
-                                        <em><a href="{{ url_for('auth.login', next=request.url) }}">Log in</a> to leave a review.</em>
-                                    </p>
-                                {% endif %}
+                                </div>
+                            </div>
+                            <div class="modal-footer"> {# Removed justify-content-between to match your customer.html more closely #}
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button> {# btn-sm added #}
+                                <button type="button" class="btn btn-primary btn-sm" onclick="addToCart('{{ current_book_id_str }}', document.getElementById('quantity-{{ current_book_id_str }}'))"> {# btn-sm added #}
+                                    Add to Cart
+                                </button>
+                                <div id="action-message-modal-{{ current_book_id_str }}" class="action-message small mt-1 text-center w-100"></div>
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary" onclick="addToCart('{{ current_book_id_str }}', this)">Add to Cart (from modal)</button>
-                        <div id="action-message-modal-{{ current_book_id_str }}" class="action-message small mt-1 text-center w-100"></div>
-                    </div>
                 </div>
-            </div>
+                {# --- End of Embedded Book Card & Its Modal --- #}
+            {% endfor %}
         </div>
-    {% endfor %}
+    {% else %}
+        <div class="alert alert-info mt-4 shadow-sm" role="alert">
+            <h4 class="alert-heading">No Books Found</h4>
+            <p>Sorry, no books currently match your filter or search criteria.</p>
+            {% if current_filters is defined and (current_filters.current_genre_filter != 'all' or current_filters.current_search_term) %}
+                <hr>
+                <p class="mb-0">Try adjusting your search, or <a href="{{ url_for('main.home') }}" class="alert-link">clear filters to view all books</a>.</p>
+            {% endif %}
+        </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
+{{ super() }} 
 <script>
-  // This Jinja-generated data is used by the external JS files.
-  window.booksData = { 
-    {% for book_obj in books %}
-        "{{ book_obj.book_id | string }}": {
-            title: {{ book_obj.title | tojson | safe }},
-            author: {{ book_obj.author | tojson | safe }},
-            image_url: {{ book_obj.image_url | tojson | safe }}
-        }
-        {% if not loop.last %},{% endif %}
-    {% endfor %}
-  };
-  // window.currentUserId is already set globally in base.html's inline script.
+    // 'books_data_for_js' is passed from the route (list of dictionaries from book.to_dict())
+    // This is useful for review_handler.js to quickly check if a user has reviewed a book
+    // or for other dynamic interactions that don't solely rely on the modal's pre-rendered content.
+    {% if books_data_for_js %}
+    window.booksData = {{ books_data_for_js|tojson|safe }};
+    {% else %}
+    window.booksData = [];
+    {% endif %}
+    // window.currentUserId is set in base.html
 </script>
 {% endblock %}

@@ -27,7 +27,9 @@ complex business rules, including transaction management where necessary.
 # For example:
 #
 # from .auth_service import authenticate_user
-# from .book_service import get_all_books, get_book_by_id
+# from .book_service import get_all_books, get_book_by_id, decrease_book_stock,
+#                         admin_add_book, admin_update_book, admin_delete_book,
+#                         get_all_distinct_genres # Add this new function
 # from .order_service import create_order_from_cart, get_orders_by_user, get_order_details
 # from .reg_service import register_user, validate_registration_data
 # from .user_service import (

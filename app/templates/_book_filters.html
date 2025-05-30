@@ -1,0 +1,53 @@
+{# cs492_bookstore_project/app/templates/_book_filters.html #}
+{# Expects: genres (list of strings), current_filters (dict with current values) #}
+{#         action_url (the URL the form should submit to) #}
+<form method="GET" action="{{ action_url }}" class="row g-3 mb-4 p-3 border rounded bg-light shadow-sm align-items-end">
+    <div class="col-md-4 col-lg-3">
+        <label for="search_term" class="form-label small mb-1">Search Title/Author</label>
+        <input type="text" class="form-control form-control-sm" id="search_term" name="search" 
+               value="{{ current_filters.current_search_term or '' }}" placeholder="e.g., Lord of the Rings, Tolkien">
+    </div>
+    <div class="col-md-3 col-lg-3">
+        <label for="genre_filter" class="form-label small mb-1">Filter by Genre</label>
+        <select class="form-select form-select-sm" id="genre_filter" name="genre">
+            <option value="all" {% if current_filters.current_genre_filter == 'all' or not current_filters.current_genre_filter %}selected{% endif %}>All Genres</option>
+            {% for genre_name in genres %}
+                <option value="{{ genre_name|lower }}" {% if current_filters.current_genre_filter == genre_name|lower %}selected{% endif %}>
+                    {{ genre_name.title() }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-3 col-lg-3">
+        <label for="sort_by" class="form-label small mb-1">Sort by</label>
+        <select class="form-select form-select-sm" id="sort_by" name="sort_by">
+            <option value="title" {% if current_filters.current_sort_by == 'title' %}selected{% endif %}>Title</option>
+            <option value="author" {% if current_filters.current_sort_by == 'author' %}selected{% endif %}>Author</option>
+            <option value="price" {% if current_filters.current_sort_by == 'price' %}selected{% endif %}>Price</option>
+            <option value="newest" {% if current_filters.current_sort_by == 'newest' %}selected{% endif %}>Newest Arrivals</option>
+            {# Add other sort options here if implemented in service #}
+        </select>
+    </div>
+    <div class="col-md-2 col-lg-1">
+        <label for="sort_order" class="form-label small mb-1">Order</label>
+        <select class="form-select form-select-sm" id="sort_order" name="sort_order">
+            <option value="asc" {% if current_filters.current_sort_order == 'asc' %}selected{% endif %}>Asc</option>
+            <option value="desc" {% if current_filters.current_sort_order == 'desc' %}selected{% endif %}>Desc</option>
+        </select>
+    </div>
+    <div class="col-md-auto mt-md-3 mt-lg-0"> {# Aligns button with form inputs on larger screens #}
+        <button type="submit" class="btn btn-primary btn-sm w-100">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-funnel-fill me-1" viewBox="0 0 16 16">
+                <path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.777.416l-2-1.5A.5.5 0 0 1 7 12V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5v-2z"/>
+            </svg>Apply
+        </button>
+    </div>
+    <div class="col-md-auto mt-md-3 mt-lg-0">
+        <a href="{{ action_url }}" class="btn btn-outline-secondary btn-sm w-100">
+             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle me-1" viewBox="0 0 16 16">
+               <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+               <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+            </svg>Clear
+        </a>
+    </div>
+</form>

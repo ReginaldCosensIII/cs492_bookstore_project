@@ -10,7 +10,12 @@ from app.services.exceptions import DatabaseError, NotFoundError, ValidationErro
  
 logger = get_logger(__name__) # Logger instance for this module
 
-def get_all_books() -> List[Book]:
+def get_all_books(
+    genre_filter: Optional[str] = None,
+    search_term: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = 'asc'
+) -> List[Book]:
     """
     Retrieves all books from the database, ordered by title.
 
@@ -27,27 +32,129 @@ def get_all_books() -> List[Book]:
         DatabaseError: If an underlying database error occurs during the fetch operation
                        that is not handled within `Book.get_all()` by returning an empty list.
     """
-    logger.info("Service: Request received to fetch all books from the database.")
+    logger.debug(f"Service: get_all_books called with: genre_filter='{genre_filter}', "
+                 f"search_term='{search_term}', sort_by='{sort_by}', sort_order='{sort_order}'")
 
-    try:
-        # Delegate to the Book model's static method.
-        # Book.get_all() is expected to handle its own DB connection, cursor, and data mapping to Book objects.
-        all_book_objects = Book.get_all() 
-        logger.info(f"Service: Successfully retrieved {len(all_book_objects)} books from the database.")
+    params_for_where_clause = []
+    base_query = "SELECT * FROM books" # Book model has 'book_id'
+    where_clauses_list = []
 
-        return all_book_objects
+    if genre_filter and genre_filter.lower() != 'all': # 'all' or empty means no genre filter
+        where_clauses_list.append("LOWER(genre) = LOWER(%s)")
+        params_for_where_clause.append(genre_filter)
+
+    if search_term:
+        where_clauses_list.append("(LOWER(title) ILIKE %s OR LOWER(author) ILIKE %s)")
+        params_for_where_clause.extend([f"%{search_term.lower()}%", f"%{search_term.lower()}%"])
+
+    full_query = base_query
+    if where_clauses_list:
+        full_query += " WHERE " + " AND ".join(where_clauses_list)
     
-    except DatabaseError as de:
-        # Log the specific DatabaseError if it was raised from the model layer.
-        logger.error(f"Service: A database error occurred in Book.get_all() while fetching all books: {de.log_message}", exc_info=True)
+    # --- Sorting Logic ---
+    allowed_sort_options = {
+        'title': 'title',
+        'author': 'author',
+        'price': 'price',
+        'newest': 'book_id'  # 'newest' maps to sorting by the 'book_id' column
+    }
+    
+    # Determine the actual database column to sort by
+    # Default to 'title' if sort_by is None, empty, or an invalid key.
+    db_column_key_to_use = sort_by if sort_by and sort_by in allowed_sort_options else 'title'
+    db_sort_column_actual = allowed_sort_options[db_column_key_to_use]
 
-        raise # Re-raise to be handled by the calling route or global error handler.
+    logger.debug(f"Service (Book Sort): Input sort_by='{sort_by}', "
+                 f"Effective key for map='{db_column_key_to_use}', DB column='{db_sort_column_actual}'")
+    if(sort_by is not None):
+        if(sort_by.lower() == "newest"):
+            if(sort_order.lower() == "asc"):
+                sort_order = "desc"
+            else:
+                sort_order = "asc"
 
+    # Validate and determine SQL sort order keyword
+    sort_order_sql_keyword = 'ASC' # Default
+    if sort_order and sort_order.lower() == 'desc':
+        sort_order_sql_keyword = 'DESC'
+    elif sort_order and sort_order.lower() != 'asc': # Catch invalid sort_order values
+        logger.warning(f"Invalid sort_order '{sort_order}' received for books. Defaulting to 'ASC'.")
+        # sort_order_sql_keyword remains 'ASC'
+
+    logger.debug(f"Service (Book Sort): SQL sort order: '{sort_order_sql_keyword}' (from input: '{sort_order}')")
+    
+
+
+    # Add ORDER BY clause
+    order_by_clause = ""
+    # For 'title' and 'author', a secondary sort by book_id ensures stability if primary sort values are the same.
+    if db_sort_column_actual in ['title', 'author']:
+        order_by_clause = f" ORDER BY {db_sort_column_actual} {sort_order_sql_keyword}, book_id {sort_order_sql_keyword}"
+    else: # For price, book_id (as newest), etc.
+        # Use title ASC as a general secondary tie-breaker for other primary sorts
+        order_by_clause = f" ORDER BY {db_sort_column_actual} {sort_order_sql_keyword}, title ASC" 
+    
+    full_query += order_by_clause
+    full_query += ";"
+
+    logger.info(f"Service: Fetching books. Genre: '{genre_filter}', Search: '{search_term}', Sort: '{db_sort_column_actual}' {sort_order_sql_keyword}.")
+    logger.debug(f"Service: Final SQL Query for books: {full_query}")
+    logger.debug(f"Service: Parameters for WHERE clause (books): {tuple(params_for_where_clause) if params_for_where_clause else 'None'}")
+
+    book_objects: List[Book] = []
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+
+            cur.execute(full_query, tuple(params_for_where_clause) if params_for_where_clause else None)
+            results_as_dicts = cur.fetchall()
+        
+        for row_dict in results_as_dicts:
+            book_obj = Book.from_row(row_dict)
+            if book_obj:
+                book_objects.append(book_obj)
+        
+        logger.info(f"Service: Successfully retrieved {len(book_objects)} books with applied filters/sort.")
+        return book_objects
     except Exception as e:
-        # Catch any other unexpected errors not specifically caught as DatabaseError by the model.
-        logger.error(f"Service: An unexpected error occurred while fetching all books: {e}", exc_info=True)
-        # Wrap in a custom DatabaseError for consistent error type from the service layer.
-        raise DatabaseError("An unexpected error occurred while retrieving book data from the database.", original_exception=e)
+        logger.error(f"Service: Database error while fetching filtered/sorted books: {e}", exc_info=True)
+        raise DatabaseError("Could not retrieve book list due to a database problem.", original_exception=e)
+    finally:
+        if conn:
+            conn.close()
+
+def get_all_distinct_genres() -> List[str]:
+    """
+    Retrieves a list of all unique, non-empty genres from the books table,
+    ordered alphabetically. Useful for populating filter dropdowns.
+
+    Returns:
+        List[str]: A list of unique genre strings. Returns an empty list on error.
+    
+    Raises:
+        DatabaseError: If a database error occurs.
+    """
+    logger.info("Service: Request to fetch all distinct book genres.")
+    query = "SELECT DISTINCT genre FROM books WHERE genre IS NOT NULL AND genre <> '' ORDER BY genre ASC;"
+    genres: List[str] = []
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur: # RealDictCursor is default
+            cur.execute(query)
+            results = cur.fetchall() # List of RealDictRow
+            for row in results:
+                if row.get('genre'): # Ensure genre key exists and value is not None
+                    genres.append(row['genre'])
+        logger.info(f"Service: Retrieved {len(genres)} distinct genres.")
+        return genres
+    except Exception as e:
+        logger.error(f"Service: Database error fetching distinct genres: {e}", exc_info=True)
+        raise DatabaseError("Could not retrieve genre list due to a database problem.", original_exception=e)
+    finally:
+        if conn:
+            conn.close()
 
 def get_book_by_id(book_id: int) -> Book: 
     """
@@ -102,7 +209,6 @@ def get_book_by_id(book_id: int) -> Book:
         logger.error(f"Service: An unexpected error occurred while fetching book by ID {book_id}: {e}", exc_info=True)
 
         raise DatabaseError(message=f"Could not retrieve book with ID {book_id} due to a server error.", original_exception=e)
-
 
 def decrease_book_stock(book_id: int, quantity_to_decrease: int, db_conn=None) -> bool:
     """
