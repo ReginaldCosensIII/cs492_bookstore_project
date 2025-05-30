@@ -81,7 +81,7 @@ class Book:
             'title': self.title.title() if self.title else "Untitled", # Display in Title Case
             'author': self.author,
             'genre': self.genre,
-            'price': str(self.price.quantize(Decimal('0.01'))), # Serialize Decimal as string
+            'price': self.price.quantize(Decimal('0.01')), # Serialize Decimal as string
             'stock_quantity': self.stock_quantity,
             'image_url': self.image_url,
             'description': self.description

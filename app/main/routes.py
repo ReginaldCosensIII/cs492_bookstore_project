@@ -1,10 +1,10 @@
 # cs492_bookstore_project/app/main/routes.py
-from flask import render_template, redirect, url_for, flash, current_app
+from flask import render_template, redirect, url_for, flash, current_app, request
 from flask_login import login_required, current_user
 from typing import List, Dict, Any # For type hinting
 
 from . import main_bp # Import the blueprint instance from app/main/__init__.py
-from app.services.book_service import get_all_books
+from app.services.book_service import get_all_books, get_all_distinct_genres
 from app.services.order_service import get_orders_by_user 
 from app.services.review_service import get_reviews_by_user_id 
 from app.services.exceptions import AuthorizationError, DatabaseError # Custom exceptions
@@ -27,73 +27,142 @@ def _get_user_context_for_log_main() -> str:
     
     return "guest user"
 
+def _get_book_display_params_from_request() -> Dict[str, Any]:
+    """
+    Helper to extract and normalize book display parameters (filter, search, sort)
+    from the current request's query arguments.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing 'genre_filter', 'search_term',
+                        'sort_by', and 'sort_order'.
+    """
+    genre_filter = request.args.get('genre', 'all', type=str).strip().lower()
+    search_term = request.args.get('search', '', type=str).strip()
+    sort_by = request.args.get('sort_by', 'title', type=str).strip().lower() # Default sort by title
+    sort_order = request.args.get('sort_order', 'asc', type=str).strip().lower()
+    if sort_order not in ['asc', 'desc']:
+        sort_order = 'asc' # Default to ascending if invalid value
+
+    return {
+        "genre_filter": genre_filter if genre_filter != 'all' else None, # Pass None if 'all'
+        "search_term": search_term,
+        "sort_by": sort_by,
+        "sort_order": sort_order,
+        # For repopulating the form, pass back the original values
+        "current_genre_filter": genre_filter, 
+        "current_search_term": search_term,
+        "current_sort_by": sort_by,
+        "current_sort_order": sort_order
+    }
 
 @main_bp.route("/")
 def home():
     """
-    Renders the home page of the bookstore.
-    Fetches all books using the book service and passes them to the `home.html` template
-    for display. Handles potential database errors gracefully.
+    Renders the home page of the bookstore (`home.html`).
+    Fetches books based on optional query parameters for filtering by genre,
+    searching by title/author, and sorting. Also fetches a list of distinct genres
+    for the filter dropdown.
+
+    Query Parameters:
+        - `genre` (str, optional): Filter books by this genre.
+        - `search` (str, optional): Search term for book titles or authors.
+        - `sort_by` (str, optional): Column to sort books by ('title', 'author', 'price', 'newest').
+                                     Defaults to 'title'.
+        - `sort_order` (str, optional): Sort direction ('asc' or 'desc'). Defaults to 'asc'.
 
     Returns:
-        Response: Renders the `home.html` template with a list of all available books.
+        Response: Renders `home.html` with the list of books, available genres,
+                  and current filter/sort parameters.
     """
     requester_context = _get_user_context_for_log_main()
-    logger.info(f"Route: Home page requested by {requester_context}.")
-    books: List[Any] = [] 
+    display_params = _get_book_display_params_from_request()
+    logger.info(f"Route: Home page requested by {requester_context} with params: {display_params}")
 
+    books_objects: List[Book] = [] # List of Book objects
+    books_for_template: List[Dict[str, Any]] = [] # List of dictionaries for JSON
+    genres: List[str] = []
     try:
-        books = get_all_books()
-        logger.debug(f"Route: Retrieved {len(books)} books for home page display.")
+        books_objects = get_all_books(
+            genre_filter=display_params["genre_filter"],
+            search_term=display_params["search_term"],
+            sort_by=display_params["sort_by"],
+            sort_order=display_params["sort_order"]
+        )
+        # Convert Book objects to dictionaries for the template/JSON
+        for book_obj in books_objects:
+            if hasattr(book_obj, 'to_dict') and callable(book_obj.to_dict):
+                books_for_template.append(book_obj.to_dict()) 
+            else:
+                # Fallback or log error if to_dict is missing, though it should be there
+                logger.warning(f"Book object (ID: {getattr(book_obj, 'book_id', 'N/A')}) missing to_dict method.")
 
+        genres = get_all_distinct_genres()
+        logger.debug(f"Route: Retrieved {len(books_for_template)} books and {len(genres)} genres for home page.")
     except DatabaseError as de:
-        logger.error(f"Route: Database error fetching books for home page: {de.log_message}", exc_info=True)
-        flash("Could not load books at this time due to a database issue. Please try again later.", "danger")
-
+        logger.error(f"Route: Database error fetching data for home page: {de.log_message}", exc_info=True)
+        flash("Could not load book data due to a database issue. Please try again later.", "danger")
     except Exception as e:
-        logger.error(f"Route: Unexpected error fetching books for home page: {e}", exc_info=True)
-        flash("An unexpected error occurred while loading books. Please try again.", "danger")
+        logger.error(f"Route: Unexpected error fetching data for home page: {e}", exc_info=True)
+        flash("An unexpected error occurred while loading book data. Please try again.", "danger")
 
-    return render_template("home.html", books=books)
-
+    return render_template("home.html", 
+                           books=books_for_template, # Pass the list of dictionaries
+                           genres=genres,
+                           current_filters=display_params,
+                           action_url=url_for('main.home')
+                           )
 
 @main_bp.route('/customer')
 @login_required 
 def customer():
     """
     Renders the customer-specific dashboard page (`customer.html`).
-    Accessible only to authenticated users. Currently displays all books.
-    Future enhancements could include more role-specific checks if 'customer'
-    becomes a more distinct role beyond general authentication.
+    Fetches books based on optional query parameters for filtering by genre,
+    searching by title/author, and sorting. Also fetches distinct genres for filters.
+    Accessible only to authenticated users.
+
+    Query Parameters: (Same as home route)
+        - `genre`, `search`, `sort_by`, `sort_order`
 
     Returns:
-        Response: Renders the `customer.html` template with a list of all available books.
+        Response: Renders `customer.html` with books, genres, and filter/sort parameters.
     """
-    user_context_log = _get_user_context_for_log_main()
-    # Role check example (currently, @login_required is the main gate)
-    # if not (hasattr(current_user, 'role') and current_user.role == 'customer'):
-    #     logger.warning(f"{user_context_log} (role: {getattr(current_user, 'role', 'N/A')}) "
-    #                    f"attempted to access customer dashboard without specific customer role.")
-    #     # Depending on policy, could raise AuthorizationError or just proceed if any logged-in user is okay
-    #     pass # For now, allow any authenticated user
+    user_context_log = _get_user_context_for_log_main() 
+    display_params = _get_book_display_params_from_request()
+    logger.info(f"Route: Customer dashboard requested by {user_context_log} with params: {display_params}")
 
-    logger.info(f"Route: Customer dashboard requested by {user_context_log}")
-    books: List[Any] = []
-
+    books_objects: List[Book] = []
+    books_for_template: List[Dict[str, Any]] = []
+    genres: List[str] = []
     try:
-        books = get_all_books()
-        logger.debug(f"Route: Retrieved {len(books)} books for customer dashboard for {user_context_log}.")
+        books_objects = get_all_books(
+            genre_filter=display_params["genre_filter"],
+            search_term=display_params["search_term"],
+            sort_by=display_params["sort_by"],
+            sort_order=display_params["sort_order"]
+        )
+        for book_obj in books_objects:
+            if hasattr(book_obj, 'to_dict') and callable(book_obj.to_dict):
+                books_for_template.append(book_obj.to_dict())
+            else:
+                logger.warning(f"Book object (ID: {getattr(book_obj, 'book_id', 'N/A')}) missing to_dict method.")
 
+        genres = get_all_distinct_genres()
+        logger.debug(f"Route: Retrieved {len(books_for_template)} books and {len(genres)} for customer dashboard ({user_context_log}).")
+    # ... (error handling as before) ...
     except DatabaseError as de:
-        logger.error(f"Route: Database error fetching books for customer dashboard ({user_context_log}): {de.log_message}", exc_info=True)
-        flash("Could not load books due to a database issue. Please try again later.", "danger")
-
+        logger.error(f"Route: Database error fetching data for home page: {de.log_message}", exc_info=True)
+        flash("Could not load book data due to a database issue. Please try again later.", "danger")
     except Exception as e:
-        logger.error(f"Route: Unexpected error fetching books for customer dashboard ({user_context_log}): {e}", exc_info=True)
-        flash("An unexpected error occurred while loading books. Please try again.", "danger")
-        
-    return render_template('customer.html', books=books) 
+        logger.error(f"Route: Unexpected error fetching data for home page: {e}", exc_info=True)
+        flash("An unexpected error occurred while loading book data. Please try again.", "danger")
 
+    return render_template('customer.html', 
+                           books=books_for_template, # Pass the list of dictionaries
+                           genres=genres,
+                           current_filters=display_params,
+                           action_url=url_for('main.customer')
+                           ) 
 
 @main_bp.route('/profile')
 @login_required 
