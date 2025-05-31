@@ -1,6 +1,7 @@
 # app/services/user_service.py
 
 import re
+from flask_login import current_user
 from typing import List, Optional, Dict, Any # For type hinting
 from app.models.db import get_db_connection # For database connections
 from app.models.user import User # User model class
@@ -8,12 +9,17 @@ from app.services.exceptions import DatabaseError, NotFoundError, ValidationErro
 from app.logger import get_logger # Custom application logger
 from werkzeug.security import generate_password_hash # For admin creating users
 
+# Validation Constants (as you have them in your user_service.py)
 PASSWORD_REGEX = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]:;\"'<>,.?/~`\-])[A-Za-z\d!@#$%^&*()_+={}\[\]:;\"'<>,.?/~`\-]{8,128}$"
 EMAIL_REGEX = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
 ALLOWED_ROLES = {'customer', 'admin', 'employee'} 
-PHONE_DIGITS_REGEX = r"^\d{10,15}$" # Example regex
+PHONE_DIGITS_REGEX = r"^\d{10,15}$"
+NAME_REGEX = r"^[A-Za-z\s'\-.,]{1,70}$"
+ZIP_CODE_REGEX = r"^\d{5}(?:[-\s]\d{4})?$" 
+STATE_REGEX = r"^[A-Za-z\s.,'-]{2}$" # Allows for full state names or abbreviations
+ADDRESS_REGEX = r"^[A-Za-z0-9\s.,#'\-\/\(\)]{1,100}$"
 
-logger = get_logger(__name__) # Logger instance for this module
+logger = get_logger(__name__) # Logger instance for this module   
 
 def admin_get_all_users(
     role_filter: Optional[str] = None, 
@@ -267,315 +273,116 @@ def admin_enable_user(user_id_to_enable: int, current_admin_id: int) -> bool:
 
 def admin_create_user(user_data: Dict[str, Any], performing_admin_id: int) -> User:
     """
-    Creates a new user account as an administrator.
-    Handles validation, password hashing for an initial password provided by the admin.
-    New users are created with `is_active = True` by database default.
+    Creates a new user account by an administrator.
+    Validates input data (including optional fields if provided), 
+    hashes password, and inserts into the database.
+    New users are created as active. `created_at` also serves as last_updated.
 
     Args:
-        user_data (Dict[str, Any]): A dictionary containing the new user's details.
-                                     Expected keys: 'first_name', 'last_name', 'email', 
-                                     'role', 'password' (initial plain text password).
+        user_data (Dict[str, Any]): Data for the new user. Expected keys include
+                                     'first_name', 'last_name', 'email', 'role', 'password'.
                                      Optional: 'phone_number', address fields.
                                      Assumes text fields are pre-sanitized (stripped) by caller.
-        performing_admin_id (int): The ID of the admin performing this action (for logging).
+        performing_admin_id (int): ID of the admin performing the action.
 
     Returns:
-        User: The newly created and saved `User` object.
+        User: The created User object.
 
     Raises:
-        ValidationError: If data validation fails (e.g., missing fields, invalid format, email exists).
-        DatabaseError: If an error occurs during the database insert operation.
+        ValidationError: If input data is invalid or email already exists.
+        DatabaseError: For database insertion errors.
         AppException: For critical errors like password hashing failure.
     """
-    email = user_data.get('email', '').lower().strip() # Ensure lowercase and stripped
-    role = user_data.get('role', '').lower().strip()
+    admin_email_log = getattr(current_user, 'email', f"AdminID:{performing_admin_id}")
+    logger.info(f"Service (Admin: {admin_email_log}): Attempting to create user. Email: '{user_data.get('email')}'")
+
+    # Extract and normalize main fields (caller should have sanitized for HTML if from form)
     first_name = user_data.get('first_name', '').strip()
     last_name = user_data.get('last_name', '').strip()
-    password = user_data.get('password', '') # Raw initial password
-
-    logger.info(f"Service (Admin ID: {performing_admin_id}): Attempting to create new user. Email: '{email}', Role: '{role}'")
-
-    # Validation
-    errors_dict: Dict[str, str] = {}
-    if not first_name: errors_dict['first_name'] = "First name is required."
-    if not last_name: errors_dict['last_name'] = "Last name is required."
-    if not email: errors_dict['email'] = "Email is required."
-    elif not re.match(EMAIL_REGEX, email): errors_dict['email'] = "Invalid email format."
-    if not role: errors_dict['role'] = "Role is required."
-    elif role not in ALLOWED_ROLES: errors_dict['role'] = f"Invalid role selected. Allowed: {', '.join(ALLOWED_ROLES)}."
-    if not password: errors_dict['password'] = "An initial password is required."
-    # Basic password complexity check (can reuse PASSWORD_REGEX from reg_service)
-    elif not re.match(PASSWORD_REGEX, password):
-        errors_dict['password'] = "Password must be at least 8 characters and include an uppercase, lowercase, number, and special character."
-
-    if errors_dict:
-        logger.warning(f"Admin create user validation failed for email '{email}': {errors_dict}")
-        raise ValidationError("User creation failed due to validation errors.", errors=errors_dict)
-
-    # Check email uniqueness (using get_user_by_email from reg_service or a similar local one)
-    # To avoid circular import if reg_service imports user_service, better to have this check here.
-    # For this, we can use a simplified version of get_user_by_email from reg_service.
-    # Or, rely on database unique constraint for email. For better UX, check first.
-    existing_user = None
-    try:
-        # Re-using the get_user_by_email from reg_service is fine if reg_service doesn't import user_service
-        # For now, let's assume a local check or that a get_user_by_email function exists that user_service can call.
-        # from app.services.reg_service import get_user_by_email # If it's safe
-        # existing_user = get_user_by_email(email)
-        # Simplified check directly:
-        conn_check = get_db_connection()
-        with conn_check.cursor() as cur_check:
-            cur_check.execute("SELECT user_id FROM users WHERE email = %s;", (email,))
-            if cur_check.fetchone():
-                existing_user = True
-        conn_check.close()
-    except Exception as e:
-        logger.error(f"DB error checking email uniqueness for '{email}' during admin create: {e}", exc_info=True)
-        raise DatabaseError("Could not verify email uniqueness due to a database issue.")
-
-    if existing_user:
-        logger.warning(f"Admin create user: Email '{email}' already exists.")
-        raise ValidationError("This email address is already registered.", errors={'email': 'Already in use.'})
-
-    try:
-        hashed_password = generate_password_hash(password)
-    except Exception as e:
-        logger.critical(f"Password hashing error for admin-created user '{email}': {e}", exc_info=True)
-        raise AppException("Internal error during user creation (password processing).", original_exception=e)
-
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            # is_active defaults to TRUE in DB schema and User model __init__
-            insert_query = """
-                INSERT INTO users (first_name, last_name, email, phone_number, password,
-                                   address_line1, address_line2, city, state, zip_code, role, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
-                RETURNING user_id, email, phone_number, created_at, first_name, last_name, 
-                          address_line1, address_line2, city, state, zip_code, role, is_active; 
-            """
-            cur.execute(insert_query, (
-                first_name, last_name, email,
-                user_data.get("phone_number") or None, hashed_password,
-                user_data.get("address_line1") or None, user_data.get("address_line2") or None,
-                user_data.get("city") or None, user_data.get("state") or None,
-                user_data.get("zip_code") or None, role
-            ))
-            created_user_row = cur.fetchone()
-            if not created_user_row:
-                raise DatabaseError("User creation failed to return user details after insert.")
-            conn.commit()
-            
-            new_user = User.from_db_row(created_user_row)
-            logger.info(f"Service (Admin ID: {performing_admin_id}): User '{email}' (Role: {role}) created successfully with ID: {new_user.id}.")
-            return new_user
-    except Exception as e:
-        if conn: conn.rollback()
-        logger.error(f"Service (Admin ID: {performing_admin_id}): DB error creating user '{email}': {e}", exc_info=True)
-        raise DatabaseError("User creation failed due to a database error.", original_exception=e)
-    finally:
-        if conn: conn.close()
-
-
-def admin_update_user_details(user_id_to_edit: int, update_data: Dict[str, Any], performing_admin_id: int) -> User:
-    """
-    Updates an existing user's details (excluding password) by an administrator.
-    Can update name, email, phone, address fields, and role.
-
-    Args:
-        user_id_to_edit (int): The ID of the user to update.
-        update_data (Dict[str, Any]): Dictionary of attributes to update.
-                                     Supported keys: 'first_name', 'last_name', 'email', 
-                                     'phone_number', 'address_line1', 'address_line2', 
-                                     'city', 'state', 'zip_code', 'role'.
-        performing_admin_id (int): The ID of the admin performing this action.
-
-    Returns:
-        User: The updated `User` object.
-
-    Raises:
-        NotFoundError: If the user with `user_id_to_edit` is not found.
-        ValidationError: If validation of `update_data` fails (e.g., email format/uniqueness, invalid role).
-        DatabaseError: If an error occurs during the database update operation.
-    """
-    logger.info(f"Service (Admin ID: {performing_admin_id}): Attempting to update details for user ID: {user_id_to_edit}")
-
-    user_to_update = admin_get_user_by_id(user_id_to_edit)
-    if not user_to_update:
-        raise NotFoundError(f"User with ID {user_id_to_edit} not found for update.")
-
-    # Validate and prepare fields for update
-    fields_to_update: Dict[str, Any] = {}
-    errors_dict: Dict[str, str] = {}
-
-    if 'first_name' in update_data:
-        first_name = str(update_data['first_name']).strip()
-        if not first_name: errors_dict['first_name'] = "First name cannot be empty."
-        else: fields_to_update['first_name'] = first_name.title()
-    
-    if 'last_name' in update_data:
-        last_name = str(update_data['last_name']).strip()
-        if not last_name: errors_dict['last_name'] = "Last name cannot be empty."
-        else: fields_to_update['last_name'] = last_name.title()
-
-    if 'email' in update_data:
-        email = str(update_data['email']).lower().strip()
-        if not email: errors_dict['email'] = "Email cannot be empty."
-        elif not re.match(EMAIL_REGEX, email): errors_dict['email'] = "Invalid email format."
-        elif email != user_to_update.email: # Check uniqueness only if email is changing
-            # existing_user_with_new_email = get_user_by_email(email) # From reg_service or local
-            conn_check = get_db_connection(); existing_user_with_new_email = None
-            with conn_check.cursor() as cur_check:
-                cur_check.execute("SELECT user_id FROM users WHERE email = %s;", (email,))
-                if cur_check.fetchone(): existing_user_with_new_email = True
-            conn_check.close()
-            if existing_user_with_new_email:
-                errors_dict['email'] = "This email address is already in use by another account."
-            else:
-                fields_to_update['email'] = email
-    
-    if 'phone_number' in update_data:
-        phone = str(update_data['phone_number']).strip()
-        if phone: # Optional, but validate if provided
-            phone_digits = re.sub(r"[^0-9]", "", phone)
-            if not re.match(PHONE_DIGITS_REGEX, phone_digits): errors_dict['phone_number'] = "Invalid phone number (10-15 digits)."
-            else: fields_to_update['phone_number'] = phone # Store original formatted if desired, or phone_digits
-        else: # Allow clearing phone number
-            fields_to_update['phone_number'] = None
-
-    # Address fields (optional, validate if provided)
-    addr_fields = ['address_line1', 'address_line2', 'city', 'state', 'zip_code']
-    for field in addr_fields:
-        if field in update_data:
-            value = str(update_data[field]).strip()
-            if value: fields_to_update[field] = value
-            else: fields_to_update[field] = None # Allow clearing optional address fields
-
-    if 'role' in update_data:
-        role = str(update_data['role']).lower().strip()
-        if not role: errors_dict['role'] = "Role cannot be empty."
-        elif role not in ALLOWED_ROLES: errors_dict['role'] = f"Invalid role. Allowed: {', '.join(ALLOWED_ROLES)}."
-        elif user_id_to_edit == performing_admin_id and role != 'admin':
-             errors_dict['role'] = "Administrators cannot change their own role from 'admin'."
-        else:
-            fields_to_update['role'] = role
-            
-    if errors_dict:
-        logger.warning(f"Admin update user ID {user_id_to_edit} validation failed: {errors_dict}")
-        raise ValidationError("User update failed due to validation errors.", errors=errors_dict)
-
-    if not fields_to_update:
-        logger.info(f"Service (Admin ID: {performing_admin_id}): No changes provided to update for user ID: {user_id_to_edit}")
-        return user_to_update # No actual update needed, return existing user
-
-    # Construct SQL UPDATE statement dynamically
-    set_clauses = []
-    update_values = []
-    for key, value in fields_to_update.items():
-        set_clauses.append(f"{key} = %s")
-        update_values.append(value)
-    
-    if not set_clauses: # Should be caught by "no changes" above, but defensive
-        return user_to_update
-
-    update_query = f"UPDATE users SET {', '.join(set_clauses)}, created_at = CURRENT_TIMESTAMP WHERE user_id = %s RETURNING *;"
-    update_values.append(user_id_to_edit)
-
-    conn = None
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute(update_query, tuple(update_values))
-            updated_user_row = cur.fetchone()
-            if not updated_user_row:
-                # This could happen if user_id was valid but somehow update affected 0 rows
-                raise DatabaseError(f"User ID {user_id_to_edit} found but update failed to apply.")
-            conn.commit()
-        
-        updated_user = User.from_db_row(updated_user_row)
-        logger.info(f"Service (Admin ID: {performing_admin_id}): User ID {user_id_to_edit} details updated successfully.")
-        return updated_user
-    except Exception as e:
-        if conn: conn.rollback()
-        logger.error(f"Service (Admin ID: {performing_admin_id}): DB error updating user ID {user_id_to_edit}: {e}", exc_info=True)
-        raise DatabaseError(f"Could not update user details for ID {user_id_to_edit}.", original_exception=e)
-    finally:
-        if conn: conn.close()
-
-def admin_create_user(user_data: Dict[str, Any], performing_admin_id: int) -> User:
-    """
-    Creates a new user account as an administrator.
-    Handles validation, password hashing for an initial password provided by the admin.
-    New users are created with `is_active = True` by database default.
-
-    Args:
-        user_data (Dict[str, Any]): A dictionary containing the new user's details.
-                                     Expected keys: 'first_name', 'last_name', 'email', 
-                                     'role', 'password' (initial plain text password).
-                                     Optional: 'phone_number', address fields.
-                                     Assumes text fields are pre-sanitized (stripped) by caller.
-        performing_admin_id (int): The ID of the admin performing this action (for logging).
-
-    Returns:
-        User: The newly created and saved `User` object.
-
-    Raises:
-        ValidationError: If data validation fails (e.g., missing fields, invalid format, email exists).
-        DatabaseError: If an error occurs during the database insert operation.
-        AppException: For critical errors like password hashing failure.
-    """
     email = user_data.get('email', '').lower().strip()
     role = user_data.get('role', '').lower().strip()
-    first_name = user_data.get('first_name', '').strip()
-    last_name = user_data.get('last_name', '').strip()
-    password = user_data.get('password', '') # Raw initial password from admin form
-
-    logger.info(f"Service (Admin ID: {performing_admin_id}): Attempting to create new user. Email: '{email}', Role: '{role}'")
+    password = user_data.get('password', '') # Raw password
+    
+    phone_number = user_data.get('phone_number', '').strip() or None
+    address_line1 = user_data.get('address_line1', '').strip() or None
+    address_line2 = user_data.get('address_line2', '').strip() or None
+    city = user_data.get('city', '').strip() or None
+    state = user_data.get('state', '').strip() or None
+    zip_code = user_data.get('zip_code', '').strip() or None
 
     errors_dict: Dict[str, str] = {}
+    # Required fields validation
     if not first_name: errors_dict['first_name'] = "First name is required."
+    elif not re.match(NAME_REGEX, first_name): errors_dict['first_name'] = "Invalid first name (1-70 chars, letters, spaces, '-,.)."
+    
     if not last_name: errors_dict['last_name'] = "Last name is required."
+    elif not re.match(NAME_REGEX, last_name): errors_dict['last_name'] = "Invalid last name (1-70 chars, letters, spaces, '-,.)."
+
     if not email: errors_dict['email'] = "Email is required."
-    elif not re.match(EMAIL_REGEX, email): errors_dict['email'] = "Invalid email format."
+    elif not re.match(EMAIL_REGEX, email): errors_dict['email'] = "Invalid email format (e.g., user@example.com)."
+    
     if not role: errors_dict['role'] = "Role is required."
     elif role not in ALLOWED_ROLES: errors_dict['role'] = f"Invalid role. Allowed: {', '.join(ALLOWED_ROLES)}."
+    
     if not password: errors_dict['password'] = "An initial password is required."
-    elif not re.match(PASSWORD_REGEX, password): # Validate initial password complexity
+    elif not re.match(PASSWORD_REGEX, password):
         errors_dict['password'] = "Password: Min 8 chars, with uppercase, lowercase, number, & special char."
+
+    # Optional fields validation (only if provided)
+    if phone_number:
+        phone_digits = re.sub(r"[^0-9]", "", phone_number)
+        if not re.match(PHONE_DIGITS_REGEX, phone_digits):
+            errors_dict['phone_number'] = "Phone number: Please enter 10 to 15 digits."
+    
+    main_address_fields_provided = any([address_line1, city, state, zip_code])
+    if main_address_fields_provided:
+        if not address_line1: errors_dict['address_line1'] = "Address Line 1 is required if providing partial address."
+        elif not re.match(ADDRESS_REGEX, address_line1): errors_dict['address_line1'] = "Invalid Address Line 1 (max 100 chars)."
+        
+        if address_line2 and not re.match(ADDRESS_REGEX, address_line2): # Optional, but validate if present
+             errors_dict['address_line2'] = "Invalid Address Line 2 (max 100 chars)."
+
+        if not city: errors_dict['city'] = "City is required if providing partial address."
+        elif not re.match(NAME_REGEX, city): errors_dict['city'] = "Invalid city name." # Using NAME_REGEX for city
+        
+        if not state: errors_dict['state'] = "State is required if providing partial address."
+        elif not re.match(STATE_REGEX, state): errors_dict['state'] = "Invalid state format (e.g., NY or California)."
+        
+        if not zip_code: errors_dict['zip_code'] = "ZIP Code is required if providing partial address."
+        elif not re.match(ZIP_CODE_REGEX, zip_code): errors_dict['zip_code'] = "Invalid ZIP code (e.g., 12345 or 12345-1234)."
 
     if errors_dict:
         logger.warning(f"Admin create user validation failed for email '{email}': {errors_dict}")
         raise ValidationError("User creation failed due to validation errors.", errors=errors_dict)
 
     # Check email uniqueness
-    conn_check = None
+    conn_check_email = None
     try:
-        conn_check = get_db_connection()
-        with conn_check.cursor() as cur_check:
-            cur_check.execute("SELECT user_id FROM users WHERE email = %s;", (email,))
-            if cur_check.fetchone():
+        conn_check_email = get_db_connection()
+        with conn_check_email.cursor() as cur_check_email:
+            cur_check_email.execute("SELECT user_id FROM users WHERE email = %s FOR UPDATE;", (email,)) # Lock for safety
+            if cur_check_email.fetchone():
                 logger.warning(f"Admin create user: Email '{email}' already exists.")
-                raise ValidationError("This email address is already registered.", errors={'email': 'Already in use.'})
+                raise ValidationError("This email address is already registered.", errors={'email': 'Email already exists.'})
     except ValidationError:
-        raise # Re-raise validation error if email exists
-    except Exception as e:
-        logger.error(f"DB error checking email uniqueness for '{email}' during admin create: {e}", exc_info=True)
-        raise DatabaseError("Could not verify email uniqueness.", original_exception=e)
+        raise
+    except Exception as e_uniq:
+        logger.error(f"DB error checking email uniqueness for '{email}' during admin create: {e_uniq}", exc_info=True)
+        raise DatabaseError("Could not verify email uniqueness due to a database issue.", original_exception=e_uniq)
     finally:
-        if conn_check: conn_check.close()
-
+        if conn_check_email: conn_check_email.close()
+    
     try:
         hashed_password = generate_password_hash(password)
-    except Exception as e:
-        logger.critical(f"Password hashing error for admin-created user '{email}': {e}", exc_info=True)
-        raise AppException("Internal error during user creation (password processing).", original_exception=e)
+    except Exception as e_hash:
+        logger.critical(f"Password hashing error for admin-created user '{email}': {e_hash}", exc_info=True)
+        raise AppException("Internal error during user creation (password processing).", original_exception=e_hash)
 
     conn = None
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
-            # is_active defaults to TRUE in DB schema. created_at also acts as an updated_at field so if a user is updated the created_at is changed to the CURRENT_TIMESTAMP
+            # created_at is set by DB default, is_active defaults to TRUE
             insert_query = """
                 INSERT INTO users (first_name, last_name, email, phone_number, password,
                                    address_line1, address_line2, city, state, zip_code, role)
@@ -584,33 +391,29 @@ def admin_create_user(user_data: Dict[str, Any], performing_admin_id: int) -> Us
                           address_line1, address_line2, city, state, zip_code, role, is_active; 
             """
             cur.execute(insert_query, (
-                first_name, last_name, email,
-                user_data.get("phone_number") or None, hashed_password,
-                user_data.get("address_line1") or None, user_data.get("address_line2") or None,
-                user_data.get("city") or None, user_data.get("state") or None,
-                user_data.get("zip_code") or None, role
+                first_name.title(), last_name.title(), email, phone_number, hashed_password,
+                address_line1, address_line2, city.title() if city else None, 
+                state.upper() if state else None, zip_code, role
             ))
             created_user_row = cur.fetchone()
             if not created_user_row:
-                raise DatabaseError("User creation failed to return user details after insert.")
+                raise DatabaseError("User creation failed to return new user details after insert.")
             conn.commit()
             
-            new_user = User.from_db_row(created_user_row) # Create User object from the returned row
-            logger.info(f"Service (Admin ID: {performing_admin_id}): User '{email}' (Role: {role}) created successfully with ID: {new_user.id}.")
+            new_user = User.from_db_row(created_user_row)
+            logger.info(f"Service (Admin: {admin_email_log}): User '{new_user.email}' (Role: {new_user.role}) created successfully. ID: {new_user.id}.")
             return new_user
     except Exception as e:
         if conn: conn.rollback()
-        logger.error(f"Service (Admin ID: {performing_admin_id}): DB error creating user '{email}': {e}", exc_info=True)
+        logger.error(f"Service (Admin: {admin_email_log}): DB error creating user '{email}': {e}", exc_info=True)
         raise DatabaseError("User creation failed due to a database error.", original_exception=e)
     finally:
         if conn: conn.close()
 
-# --- NEW Admin User Update Function ---
 def admin_update_user_details(user_id_to_edit: int, update_data: Dict[str, Any], performing_admin_id: int) -> User:
     """
     Updates an existing user's details (excluding password) by an administrator.
     Can update name, email, phone, address fields, and role.
-    The 'is_active' status is handled by admin_enable_user/admin_disable_user functions.
 
     Args:
         user_id_to_edit (int): The ID of the user to update.
@@ -618,7 +421,6 @@ def admin_update_user_details(user_id_to_edit: int, update_data: Dict[str, Any],
                                      Supported keys: 'first_name', 'last_name', 'email', 
                                      'phone_number', 'address_line1', 'address_line2', 
                                      'city', 'state', 'zip_code', 'role'.
-                                     Assumes text fields are pre-sanitized by caller.
         performing_admin_id (int): The ID of the admin performing this action.
 
     Returns:
@@ -629,114 +431,128 @@ def admin_update_user_details(user_id_to_edit: int, update_data: Dict[str, Any],
         ValidationError: If validation of `update_data` fails (e.g., email format/uniqueness, invalid role).
         DatabaseError: If an error occurs during the database update operation.
     """
-    logger.info(f"Service (Admin ID: {performing_admin_id}): Attempting to update details for user ID: {user_id_to_edit}")
+    admin_email_log = getattr(current_user, 'email', f"AdminID:{performing_admin_id}")
+    logger.info(f"Service (Admin: {admin_email_log}): Updating details for user ID: {user_id_to_edit}")
 
     user_to_update = admin_get_user_by_id(user_id_to_edit)
-    if not user_to_update: # admin_get_user_by_id returns None if not found
-        logger.warning(f"Service (Admin ID: {performing_admin_id}): User ID {user_id_to_edit} not found for update.")
-        raise NotFoundError(f"User with ID {user_id_to_edit} not found. Cannot update details.")
+    if not user_to_update:
+        raise NotFoundError(f"User ID {user_id_to_edit} not found for update.")
 
-    # Validate and prepare fields for update
-    fields_to_update_in_db: Dict[str, Any] = {} # Actual DB column updates
-    errors_dict: Dict[str, str] = {}
-
-    # Note: Assumes update_data values are already stripped by the caller (e.g., route using sanitize_form_data)
+    fields_to_update_in_db: Dict[str, Any] = {}
+    validation_errors_dict: Dict[str, str] = {}
+    
+    # Validate and prepare each field present in update_data
+    # Note: Assumes text values in update_data are already stripped by caller (e.g., sanitize_form_data in route)
+    
     if 'first_name' in update_data:
-        first_name = str(update_data['first_name']).strip()
-        if not first_name: errors_dict['first_name'] = "First name cannot be empty."
-        else: fields_to_update_in_db['first_name'] = first_name.title()
+        val = update_data['first_name']
+        if not val: validation_errors_dict['first_name'] = "First name cannot be empty."
+        elif not re.match(NAME_REGEX, val): validation_errors_dict['first_name'] = "Invalid first name format (1-70 chars, letters, spaces, '-,.)."
+        else: fields_to_update_in_db['first_name'] = val.title()
     
     if 'last_name' in update_data:
-        last_name = str(update_data['last_name']).strip()
-        if not last_name: errors_dict['last_name'] = "Last name cannot be empty."
-        else: fields_to_update_in_db['last_name'] = last_name.title()
+        val = update_data['last_name']
+        if not val: validation_errors_dict['last_name'] = "Last name cannot be empty."
+        elif not re.match(NAME_REGEX, val): validation_errors_dict['last_name'] = "Invalid last name format (1-70 chars, letters, spaces, '-,.)."
+        else: fields_to_update_in_db['last_name'] = val.title()
 
     if 'email' in update_data:
-        email = str(update_data['email']).lower().strip()
-        if not email: errors_dict['email'] = "Email cannot be empty."
-        elif not re.match(EMAIL_REGEX, email): errors_dict['email'] = "Invalid email format."
-        elif email != user_to_update.email: # Check uniqueness only if email is changing
-            existing_user_with_new_email = None
-            conn_check_email = None
+        email = update_data['email'].lower() # Already stripped by sanitize_form_data
+        if not email: validation_errors_dict['email'] = "Email cannot be empty."
+        elif not re.match(EMAIL_REGEX, email): validation_errors_dict['email'] = "Invalid email format."
+        elif email != user_to_update.email: 
+            conn_check_email = None; existing_user_with_new_email = False
             try:
                 conn_check_email = get_db_connection()
                 with conn_check_email.cursor() as cur_check_email:
-                    cur_check_email.execute("SELECT user_id FROM users WHERE email = %s;", (email,))
+                    cur_check_email.execute("SELECT user_id FROM users WHERE email = %s AND user_id != %s;", (email, user_id_to_edit))
                     if cur_check_email.fetchone(): existing_user_with_new_email = True
             except Exception as e_uniq:
-                 logger.error(f"DB error checking email uniqueness for '{email}' during admin update: {e_uniq}", exc_info=True)
-                 errors_dict['email'] = "Could not verify email uniqueness. DB error." # Add to field errors
+                 logger.error(f"DB error checking email uniqueness for '{email}' in admin update: {e_uniq}", exc_info=True)
+                 validation_errors_dict['email'] = "Could not verify email uniqueness (DB error)."
             finally:
                 if conn_check_email: conn_check_email.close()
-
             if existing_user_with_new_email:
-                errors_dict['email'] = "This email address is already in use by another account."
-            else:
-                fields_to_update_in_db['email'] = email
+                validation_errors_dict['email'] = "This email address is already in use."
+            elif 'email' not in validation_errors_dict: fields_to_update_in_db['email'] = email
     
-    if 'phone_number' in update_data: # Optional field
-        phone = str(update_data['phone_number']).strip()
-        if phone: 
+    if 'phone_number' in update_data:
+        phone = update_data.get('phone_number', '') # Should be stripped by sanitize_form_data
+        if phone:
             phone_digits = re.sub(r"[^0-9]", "", phone)
-            if not re.match(PHONE_DIGITS_REGEX, phone_digits): errors_dict['phone_number'] = "Invalid phone (10-15 digits)."
-            else: fields_to_update_in_db['phone_number'] = phone 
-        else: 
-            fields_to_update_in_db['phone_number'] = None # Allow clearing
+            if not re.match(PHONE_DIGITS_REGEX, phone_digits): 
+                validation_errors_dict['phone_number'] = "Invalid phone (10-15 digits)."
+            else: fields_to_update_in_db['phone_number'] = phone
+        else: fields_to_update_in_db['phone_number'] = None
 
-    # Address fields are optional, validate if provided
-    addr_keys = ['address_line1', 'address_line2', 'city', 'state', 'zip_code']
-    for key in addr_keys:
+    addr_keys_map = {'address_line1': ADDRESS_REGEX, 'address_line2': ADDRESS_REGEX, 
+                     'city': NAME_REGEX, 'state': STATE_REGEX, 'zip_code': ZIP_CODE_REGEX}
+    for key in addr_keys_map.keys(): # Use .keys() for iterating over dict keys
         if key in update_data:
-            value = str(update_data[key]).strip()
-            if value: fields_to_update_in_db[key] = value
-            else: fields_to_update_in_db[key] = None # Allow clearing
+            value = update_data.get(key, '') # Should be stripped by sanitize_form_data
+            if value: # If value is provided (not empty after strip), validate it
+                if key == 'address_line2' and not value: # address_line2 is optional, can be empty
+                    fields_to_update_in_db[key] = None
+                    continue
+                if not re.match(addr_keys_map[key], value): # Use addr_keys_map[key] for regex
+                    validation_errors_dict[key] = f"Invalid format for {key.replace('_', ' ')}."
+                else: 
+                    fields_to_update_in_db[key] = value.title() if key == 'city' else (value.upper() if key == 'state' else value)
+            else: # Allow clearing optional address fields
+                fields_to_update_in_db[key] = None if key != 'address_line1' else fields_to_update_in_db.get(key) # address_line1 might be required if others are set
 
     if 'role' in update_data:
-        role = str(update_data['role']).lower().strip()
-        if not role: errors_dict['role'] = "Role cannot be empty."
-        elif role not in ALLOWED_ROLES: errors_dict['role'] = f"Invalid role. Allowed: {', '.join(ALLOWED_ROLES)}."
-        # Prevent admin from changing their own role away from 'admin' if they are the one being edited
+        role = update_data['role'].lower() # Should be stripped
+        if not role: validation_errors_dict['role'] = "Role cannot be empty."
+        elif role not in ALLOWED_ROLES: validation_errors_dict['role'] = f"Invalid role. Allowed: {', '.join(ALLOWED_ROLES)}."
         elif user_id_to_edit == performing_admin_id and role != 'admin':
-             errors_dict['role'] = "Administrators cannot change their own role from 'admin' via this form."
+             validation_errors_dict['role'] = "Administrators cannot change their own role from 'admin'."
         else:
             fields_to_update_in_db['role'] = role
             
-    if errors_dict: # If any validation errors occurred
-        logger.warning(f"Admin update user ID {user_id_to_edit} validation failed: {errors_dict}")
-        raise ValidationError("User update failed due to validation errors.", errors=errors_dict)
+    if validation_errors_dict:
+        logger.warning(f"Admin update user ID {user_id_to_edit} validation failed: {validation_errors_dict}")
+        raise ValidationError("User update failed due to validation errors.", errors=validation_errors_dict)
 
-    if not fields_to_update_in_db: # No actual changes to commit
-        logger.info(f"Service (Admin ID: {performing_admin_id}): No changes provided to update for user ID: {user_id_to_edit}")
-        return user_to_update # Return the unchanged user object
+    if not fields_to_update_in_db:
+        logger.info(f"Service (Admin: {admin_email_log}): No valid data changes provided to update for user ID: {user_id_to_edit}. Only 'created_at' will be updated.")
+        # Even if no other fields change, we update created_at to mark the 'edit' action
+        fields_to_update_in_db['created_at'] = "CURRENT_TIMESTAMP_MARKER" 
 
-    # Construct SQL UPDATE statement dynamically based on fields_to_update_in_db
     set_clauses_sql = []
     update_values_sql = []
+    always_update_created_at = True # Flag to ensure created_at is in the SET clause
+
     for key, value in fields_to_update_in_db.items():
+        if key == 'created_at' and value == "CURRENT_TIMESTAMP_MARKER":
+            continue # Will be handled by always adding created_at = CURRENT_TIMESTAMP
         set_clauses_sql.append(f"{key} = %s")
         update_values_sql.append(value)
     
-    update_query = f"UPDATE users SET {', '.join(set_clauses_sql)}, created_at = CURRENT_TIMESTAMP WHERE user_id = %s RETURNING *;"
-    update_values_sql.append(user_id_to_edit)
+    set_clauses_sql.append("created_at = CURRENT_TIMESTAMP") 
+
+    if not set_clauses_sql: # Should not be empty now
+        return user_to_update 
+
+    update_query = f"UPDATE users SET {', '.join(set_clauses_sql)} WHERE user_id = %s RETURNING *;"
+    final_update_values = list(update_values_sql) 
+    final_update_values.append(user_id_to_edit)
 
     conn = None
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
-            cur.execute(update_query, tuple(update_values_sql))
+            cur.execute(update_query, tuple(final_update_values))
             updated_user_row = cur.fetchone()
             if not updated_user_row:
-                # This could happen if user_id was valid but update affected 0 rows (e.g., race condition where user deleted)
-                logger.error(f"User ID {user_id_to_edit} was found but update query affected 0 rows.")
-                raise DatabaseError(f"User ID {user_id_to_edit} found but update failed to apply in database.")
+                raise DatabaseError(f"User ID {user_id_to_edit} update query affected 0 rows.")
             conn.commit()
-        
         updated_user_object = User.from_db_row(updated_user_row)
-        logger.info(f"Service (Admin ID: {performing_admin_id}): User ID {user_id_to_edit} details updated successfully.")
+        logger.info(f"Service (Admin: {admin_email_log}): User ID {user_id_to_edit} details updated successfully (created_at reflects modification).")
         return updated_user_object
     except Exception as e:
         if conn: conn.rollback()
-        logger.error(f"Service (Admin ID: {performing_admin_id}): DB error updating user ID {user_id_to_edit}: {e}", exc_info=True)
+        logger.error(f"Service (Admin: {admin_email_log}): DB error updating user ID {user_id_to_edit}: {e}", exc_info=True)
         raise DatabaseError(f"Could not update user details for ID {user_id_to_edit}.", original_exception=e)
     finally:
         if conn: conn.close()
