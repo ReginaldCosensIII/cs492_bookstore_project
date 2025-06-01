@@ -2,6 +2,7 @@
 import os
 from decimal import Decimal # Not directly used here, but good if _get_cart_summary_for_context were more complex
 from datetime import datetime
+from flask_mail import Mail
 from flask_login import LoginManager
 from flask import Flask, jsonify, request, render_template, flash, redirect, url_for, session # Added session
 
@@ -19,6 +20,7 @@ login_manager = LoginManager()
 login_manager.login_message_category = "warning" # Bootstrap alert category
 login_manager.login_message = "Please log in to access this page or complete this action."
 login_manager.login_view = 'auth.login' # Endpoint for login page (blueprint_name.view_function_name)
+mail = Mail() # Flask Mail instance to send emails
 
 def _get_cart_summary_for_context() -> Dict[str, Any]:
     """
@@ -90,6 +92,7 @@ def create_app(config_name: str = 'default') -> Flask:
         Flask: The configured Flask application instance.
     """
     app = Flask(__name__, instance_relative_config=False)
+    mail.init_app(app)
 
     selected_config_obj = config.get(config_name, config['default'])
     app.config.from_object(selected_config_obj)

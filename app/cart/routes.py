@@ -2,20 +2,24 @@
 
 import re                                                                               # For EMAIL_REGEX validation
 from . import cart_bp                                                                   # Import the BP instance
-from app.logger import get_logger                                                       # Custom application logger
+from datetime import datetime
+from app.logger import get_logger                                                       # Custom application logger                                                    
+from app.models.order import Order                                                      # For type hinting
 from flask_login import current_user                                                    # login_required is used selectively
-from typing import Dict, Tuple, List, Any                                               # For type hinting
 from decimal import Decimal, ROUND_HALF_UP                                              # For precise $$ calculations
+from app.services.email_service import send_email
+from typing import Dict, Tuple, List, Any, Optional                                     # For type hinting
 from app.services.book_service import get_book_by_id                                    # Service to fetch book details
-from app.services.order_service import create_order_from_cart                           # Service to create orders
-from app.utils import sanitize_html_text, normalize_whitespace                          # For input sanitization
+from app.services.order_service import create_order_from_cart, get_order_details                           # Service to create orders
+from app.utils import sanitize_form_data, sanitize_form_field_value, normalize_whitespace 
 from flask import request, session, jsonify, render_template, flash, redirect, url_for
 from app.services.exceptions import (                                                   # Custom exceptions for error handling
     NotFoundError, 
     CartActionError, 
     ValidationError, 
-    OrderProcessingError,
-    DatabaseError
+    DatabaseError,
+    AppException,
+    OrderProcessingError
 )
 
 logger = get_logger(__name__) # Logger instance for this module
@@ -651,109 +655,143 @@ def place_order_route():
                   page with error messages on failure.
     """
     user_context_for_log = _get_user_context_for_log()
+    logger.info(f"Route: {user_context_for_log} attempting to place an order.")
+    
     cart_session = session.get("cart", {})
-
     if not cart_session:
-        logger.warning(f"{user_context_for_log} attempted to place order with an empty cart session.")
-        flash("Your cart is empty. Cannot place an order.", "danger")
-
+        flash("Your cart is empty. Cannot place an order.", "warning")
         return redirect(url_for('cart.view_cart_route'))
 
-    form = request.form
-    # Shipping details keys should match Order model __init__ params for easy unpacking in service
-    shipping_details = {
-        "shipping_address_line1": normalize_whitespace(form.get('shipping_address_line1', '')),
-        "shipping_address_line2": normalize_whitespace(form.get('shipping_address_line2', '')),
-        "shipping_city": normalize_whitespace(form.get('shipping_city', '')),
-        "shipping_state": normalize_whitespace(form.get('shipping_state', '')).upper(),
-        "shipping_zip_code": normalize_whitespace(form.get('shipping_zip_code', ''))
-    }
+    form_data_raw = request.form.to_dict()
+    # For shipping details, it's usually better to normalize whitespace and then pass to sanitize_form_data
+    # if HTML escaping is needed for some fields. Addresses generally don't need HTML escaping.
     
-    order_user_id = None
-    guest_email_from_form = None # Use a distinct variable for email from this form submission
-
-    if current_user.is_authenticated:
-        order_user_id = current_user.id
-
-    else: # Guest checkout: email is required from the form
-        guest_email_from_form = normalize_whitespace(form.get('guest_email', '')).lower()
-
-        if not guest_email_from_form or not re.match(EMAIL_REGEX, guest_email_from_form):
-            flash("A valid email address is required for guest checkout.", "danger")
-            # Re-render checkout page with errors; need cart data again
-            cart_items_detailed, grand_total, _ = _calculate_current_cart_total_and_items(cart_session)
-
-            return render_template("checkout.html", 
-                                   cart_items=cart_items_detailed, cart_total=grand_total,
-                                   shipping_address=shipping_details, # Pass back submitted shipping details
-                                   guest_email=guest_email_from_form, # Pass back submitted (invalid) email
-                                   errors={"guest_email": "A valid email address is required."}), 400
-        
-        # Store valid guest email in session in case they need to re-submit checkout form
-        session['guest_checkout_email_prefill'] = guest_email_from_form 
-        session.modified = True
-
-    # Server-side validation for presence of required shipping fields
-    required_shipping_keys_for_model = ['shipping_address_line1', 'shipping_city', 'shipping_state', 'shipping_zip_code']
-    form_validation_errors = {} # To collect errors for re-rendering form
-
-    for field_key in required_shipping_keys_for_model:
-        if not shipping_details.get(field_key): # Check if empty after normalization
+    # Normalize and prepare shipping details
+    shipping_details_for_service = {
+        "shipping_address_line1": normalize_whitespace(form_data_raw.get('shipping_address_line1', '')),
+        "shipping_address_line2": normalize_whitespace(form_data_raw.get('shipping_address_line2', '')),
+        "shipping_city": normalize_whitespace(form_data_raw.get('shipping_city', '')),
+        "shipping_state": normalize_whitespace(form_data_raw.get('shipping_state', '')).upper(), # States often stored/compared uppercase
+        "shipping_zip_code": normalize_whitespace(form_data_raw.get('shipping_zip_code', ''))
+    }
+    # Basic validation for required shipping fields (can be expanded in service layer)
+    required_shipping_fields = ['shipping_address_line1', 'shipping_city', 'shipping_state', 'shipping_zip_code']
+    form_validation_errors = {}
+    for field_key in required_shipping_fields:
+        if not shipping_details_for_service.get(field_key):
             error_message = "This shipping field is required."
-            flash(f"The field '{field_key.replace('_',' ').title()}' is required for shipping.", "danger")
-            form_validation_errors[field_key] = error_message # Key matches form field name or Order model attribute
+            flash(f"The field '{field_key.replace('_',' ').title()}' is required.", "danger") # User-friendly field name
+            form_validation_errors[field_key] = error_message
             
     if form_validation_errors:
         cart_items_detailed, grand_total, _ = _calculate_current_cart_total_and_items(cart_session)
-
         return render_template("checkout.html", 
-                               cart_items=cart_items_detailed, 
-                               cart_total=grand_total,
-                               shipping_address=shipping_details, # Pass back current shipping details
-                               guest_email=guest_email_from_form if not order_user_id else None, 
-                               errors=form_validation_errors), 400 # HTTP 400 for bad request
-    
-    try:
-        logger.info(f"Attempting to place order for {user_context_for_log}. Cart: {cart_session}, Shipping: {shipping_details}")
+                               cart_items=cart_items_detailed, cart_total=grand_total,
+                               shipping_address=shipping_details_for_service, # Pass back submitted (and normalized) details
+                               guest_email=form_data_raw.get('guest_email', ''), # Pass back raw guest email
+                               errors=form_validation_errors), 400
+
+    guest_email_for_service: Optional[str] = None
+    user_id_for_service: Optional[int] = None
+    recipient_email_for_confirmation: Optional[str] = None
+    user_name_for_confirmation: str = "Valued Customer"
+
+    if current_user.is_authenticated:
+        user_id_for_service = getattr(current_user, 'id', None)
+        recipient_email_for_confirmation = getattr(current_user, 'email', None)
+        user_name_for_confirmation = getattr(current_user, 'first_name', '').title() or "BookNook Customer"
+    else:
+        guest_email_raw = form_data_raw.get('guest_email', '')
+        # Normalize and validate guest email
+        guest_email_for_service = normalize_whitespace(guest_email_raw).lower()
         
-        # Call the order service to create the order.
-        # The service handles stock deduction and database transactions.
+        if not guest_email_for_service or not re.match(EMAIL_REGEX, guest_email_for_service):
+            flash("A valid email address is required for guest checkout.", "danger")
+            cart_items_detailed, grand_total, _ = _calculate_current_cart_total_and_items(cart_session)
+            return render_template("checkout.html", 
+                                   cart_items=cart_items_detailed, cart_total=grand_total,
+                                   shipping_address=shipping_details_for_service, 
+                                   guest_email=guest_email_raw, # Pass back the raw, possibly invalid email
+                                   errors={"guest_email": "A valid email is required."}), 400
+        recipient_email_for_confirmation = guest_email_for_service
+        session['guest_checkout_email_prefill'] = guest_email_for_service # Store valid, normalized email for prefill
+
+    if not recipient_email_for_confirmation:
+        flash("A valid email address is required to place an order.", "danger")
+        return redirect(url_for('cart.checkout_page_route'))
+            
+    try:
+        logger.info(f"Attempting to create order for {user_context_for_log}. Shipping: {shipping_details_for_service}")
+        
         order = create_order_from_cart(
-            user_id=order_user_id, # Will be None for guests
+            user_id=user_id_for_service,
             cart_items_session=cart_session, 
-            shipping_details=shipping_details, # This dict uses keys like 'shipping_address_line1'
-            guest_email_for_order=guest_email_from_form # Pass the validated guest email
+            shipping_details=shipping_details_for_service,
+            guest_email_for_order=guest_email_for_service
         )
         
-        # Clear cart from session on successful order creation
-        session.pop("cart", None) 
+        if not order or not order.order_id:
+            logger.error(f"Order creation failed to return a valid order object for {user_context_for_log}.")
+            raise DatabaseError("Order processing failed: Could not get order details after creation.")
 
-        if not current_user.is_authenticated: # If it was a guest order
-            session.pop("guest_checkout_email_prefill", None) # Clear prefill email
-            # Set session variables for the guest to view this specific order confirmation page
-            session['just_placed_order_id'] = order.order_id
-            session['guest_order_email'] = guest_email_from_form # The email used for THIS order
-            logger.debug(f"GUEST ORDER (place_order_route): Set session 'just_placed_order_id' to {order.order_id} and 'guest_order_email' to '{guest_email_from_form}' for confirmation page access.")
-
-        session.modified = True # Ensure all session changes are saved
-        
         logger.info(f"Order {order.order_id} placed successfully for {user_context_for_log}.")
-        flash(f"Thank you! Your order (ID: {order.order_id}) has been placed successfully! A confirmation email will be sent shortly.", "success")
-        
-        logger.debug(f"Redirecting to order confirmation page for order_id: {order.order_id}. Current session before redirect: {dict(session)}")
 
+        # Send order confirmation email using the template
+        if recipient_email_for_confirmation:
+            email_subject = f"Your BookNook Order Confirmation (#{order.order_id})"
+            
+            email_context = {
+                "order": order,  # The fully populated Order object with its items
+                "user_name": user_name_for_confirmation,
+                "current_year": datetime.utcnow().year # For the email template's footer
+            }
+            
+            try:
+                # Call send_email with template path and context
+                # The template path is relative to the 'templates' folder
+                send_email(
+                    to_email=recipient_email_for_confirmation,
+                    subject=email_subject,
+                    template_path='email/order_confirmation_email.html', 
+                    **email_context
+                )
+                logger.info(f"Order confirmation email initiated for order {order.order_id} to '{recipient_email_for_confirmation}'.")
+                flash(f"Thank you! Your order (ID: {order.order_id}) has been placed. A confirmation email has been sent.", "success")
+            except AppException as email_exc: 
+                logger.error(
+                    f"Failed to send order confirmation email for order {order.order_id} to '{recipient_email_for_confirmation}'. "
+                    f"Error: {email_exc.log_message}", exc_info=True # Log stack trace for app exceptions too
+                )
+                flash(f"Your order (ID: {order.order_id}) was placed successfully, but we encountered an issue sending the confirmation email. "
+                      "Please check your order history or contact support if you have questions.", "warning")
+            except Exception as generic_email_exc: 
+                 logger.error(
+                    f"Unexpected generic error sending confirmation email for order {order.order_id} to '{recipient_email_for_confirmation}'. "
+                    f"Error: {generic_email_exc}", exc_info=True
+                )
+                 flash(f"Your order (ID: {order.order_id}) was placed successfully, but there was an unexpected error sending the confirmation email.", "warning")
+        else:
+            logger.warning(f"No recipient email found for order {order.order_id}. Cannot send confirmation email.")
+            flash(f"Thank you! Your order (ID: {order.order_id}) has been placed successfully!", "success") # Still inform order success
+
+        session.pop("cart", None) 
+        if not current_user.is_authenticated:
+            session.pop("guest_checkout_email_prefill", None) # Clear prefill after successful order
+            session['just_placed_order_id'] = order.order_id
+            session['guest_order_email'] = guest_email_for_service # Store the validated guest email
+            logger.debug(f"GUEST ORDER: Set session 'just_placed_order_id' to {order.order_id} and 'guest_order_email' for confirmation page.")
+        session.modified = True
+        
+        logger.debug(f"Redirecting to order confirmation page for order_id: {order.order_id}. Current session: {dict(session)}")
         return redirect(url_for('order.order_confirmation_route', order_id=order.order_id))
 
-    except (ValidationError, OrderProcessingError, NotFoundError, DatabaseError) as e:
-        # These are specific, known exceptions from the service layer or validation.
+    except (ValidationError, OrderProcessingError, NotFoundError, DatabaseError, AppException) as e:
         logger.error(f"Order placement failed for {user_context_for_log} with {type(e).__name__}: {getattr(e, 'user_facing_message', str(e))}", 
-                     exc_info=True if isinstance(e, (OrderProcessingError, NotFoundError, DatabaseError)) else False) # More trace for some
+                     exc_info=True) # Always log stack trace for these handled errors
         flash(getattr(e, 'user_facing_message', "An error occurred while processing your order. Please try again."), "danger")
-
-        # Redirect back to checkout page; cart is still in session, user can retry.
+        # Important: Redirect back to checkout, don't try to render template with old/stale cart data if order service failed
         return redirect(url_for('cart.checkout_page_route')) 
-    except Exception as e: # Catch any other unexpected exceptions
-        logger.critical(f"Unexpected critical error during order placement for {user_context_for_log}: {e}", exc_info=True)
+    except Exception as e_place_order:
+        logger.critical(f"Unexpected critical error during order placement for {user_context_for_log}: {e_place_order}", exc_info=True)
         flash("An unexpected critical error occurred while processing your order. Our team has been notified. Please try again later or contact support.", "danger")
-        
         return redirect(url_for('cart.checkout_page_route'))

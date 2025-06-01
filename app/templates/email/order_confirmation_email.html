@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your BookNook Order Confirmation (ID: {{ order.order_id if order and order.order_id is defined else 'N/A' }})</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; padding: 20px; background-color: #fff; border: 1px solid #ddd; border-radius: 5px; }
+        .header { text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .header h1 { margin: 0; color: #5A189A; } /* Purple like your logo */
+        .order-details th, .order-details td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: middle; } /* Added vertical-align */
+        .order-details th { background-color: #f9f9f9; }
+        .order-details { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .footer { text-align: center; margin-top: 20px; font-size: 0.9em; color: #777; }
+        .total-row strong { color: #5A189A; }
+        a { color: #007bff; text-decoration: none; }
+        .book-image { max-width: 60px; max-height: 80px; margin-right: 10px; border: 1px solid #eee; } /* Style for book image */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>BookNook Order Confirmation</h1>
+        </div>
+
+        <p>Dear {{ user_name or 'Valued Customer' }},</p>
+        <p>Thank you for your order! We're excited to get it ready for you. Your order details are below:</p>
+
+        {% if order %}
+        <p>
+            <strong>Order ID:</strong> {{ order.order_id }}<br>
+            <strong>Order Date:</strong> {{ order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else 'N/A' }}
+        </p>
+
+        <h4>Items Ordered:</h4>
+        {% if order.items %}
+        <table class="order-details">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">Image</th> <th>Book Title</th>
+                    <th style="text-align: center;">Quantity</th>
+                    <th style="text-align: right;">Unit Price</th>
+                    <th style="text-align: right;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items %} {# order.items should be a list of OrderItem objects #}
+                <tr>
+                    <td>
+                        {% if item.book_image_url %}
+                            <img src="{{ item.book_image_url }}" alt="{{ item.book_title.title() if item.book_title else 'Book Cover' }}" class="book-image">
+                        {% else %}
+                            <span style="font-size:0.8em; color: #888;">No Image</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.book_title.title() if item.book_title else 'N/A' }}</td>
+                    <td style="text-align: center;">{{ item.quantity }}</td>
+                    <td style="text-align: right;">${{ "%.2f"|format(item.unit_price_at_purchase if item.unit_price_at_purchase is not none else 0.00) }}</td>
+                    <td style="text-align: right;">${{ "%.2f"|format(item.quantity * item.unit_price_at_purchase if item.unit_price_at_purchase is not none else 0.00) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td colspan="4" style="text-align: right;"><strong>Order Total:</strong></td> <td style="text-align: right;"><strong>${{ "%.2f"|format(order.total_amount if order.total_amount is not none else 0.00) }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+        {% else %}
+        <p>No items were found for this order.</p>
+        {% endif %}
+
+        <h4>Shipping Address:</h4>
+        <p>
+            {{ order.shipping_address_line1 or '' }}<br>
+            {% if order.shipping_address_line2 %}{{ order.shipping_address_line2 }}<br>{% endif %}
+            {{ order.shipping_city or '' }}{% if order.shipping_city and order.shipping_state %},{% endif %} {{ order.shipping_state or '' }} {{ order.shipping_zip_code or '' }}
+        </p>
+        
+        {% if order.guest_email %}
+            <p>This order was placed using the email: {{ order.guest_email }}</p>
+        {% endif %}
+
+        {% else %}
+        <p><strong>Error: Order details could not be loaded. Please contact support with your order information if you have it.</strong></p>
+        {% endif %}
+
+        <p>We'll notify you once your order has shipped. If you have any questions, feel free to contact us or visit our website.</p>
+        <p>Thank you for shopping with BookNook!</p>
+
+        <div class="footer">
+            <p>&copy; {{ current_year }} BookNook. All rights reserved.</p>
+            <p><a href="{{ url_for('main.home', _external=True) }}">Visit BookNook</a></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -16,7 +16,7 @@ ALLOWED_ROLES = {'customer', 'admin', 'employee'}
 PHONE_DIGITS_REGEX = r"^\d{10,15}$"
 NAME_REGEX = r"^[A-Za-z\s'\-.,]{1,70}$"
 ZIP_CODE_REGEX = r"^\d{5}(?:[-\s]\d{4})?$" 
-STATE_REGEX = r"^[A-Za-z\s.,'-]{2}$" # Allows for full state names or abbreviations
+STATE_REGEX = r"^[A-Za-z\s.,'-]{2}$"
 ADDRESS_REGEX = r"^[A-Za-z0-9\s.,#'\-\/\(\)]{1,100}$"
 
 logger = get_logger(__name__) # Logger instance for this module   

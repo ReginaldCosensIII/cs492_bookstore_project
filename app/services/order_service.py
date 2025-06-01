@@ -92,8 +92,11 @@ def create_order_from_cart(user_id: Optional[int],
                 item_total = price_at_purchase * Decimal(quantity)
                 calculated_total_amount += item_total
                 order_items_to_process_for_db.append({
-                    'book_id': book_id, 'quantity': quantity, 
-                    'unit_price_at_purchase': price_at_purchase, 'book_title': book.title
+                    'book_id': book_id, 
+                    'quantity': quantity, 
+                    'unit_price_at_purchase': price_at_purchase, 
+                    'book_title': book.title,
+                    'book_image_url': book.image_url
                 })
 
             except ValueError as ve:
@@ -112,7 +115,7 @@ def create_order_from_cart(user_id: Optional[int],
         conn = get_db_connection()
         conn.autocommit = False 
 
-        order_status = "Pending Payment" 
+        order_status = "Awaiting Fulfillment" 
         order_date_db = datetime.utcnow()
         
         # SQL query for inserting into 'orders' table.

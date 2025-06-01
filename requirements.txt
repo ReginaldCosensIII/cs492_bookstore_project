@@ -8,6 +8,7 @@ Jinja2>=3.1,<3.2     # Flask dependency
 Flask-Login>=0.6,<0.7
 gunicorn>=20.1,<22.0 # For production WSGI server
 markupsafe>=2.1,<2.2 # Dependency of Jinja2/Flask, good for XSS protection
+Flask-Mail>=0.10.0  # Dependence for sending emails
 
 # Add other direct dependencies if you use them.
 # For example, if you add testing frameworks later:
