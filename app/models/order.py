@@ -146,7 +146,7 @@ class Order:
             # Using self.order_date as the 'created_at' value in the dictionary output for clarity
             'created_at': self.order_date.isoformat() if self.order_date else None, 
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'total_amount': str(self.total_amount), 
+            "total_amount": str(self.total_amount.quantize(Decimal("0.01"))) if self.total_amount is not None else "0.00", # String
             'status': self.status,
             'shipping_address_line1': self.shipping_address_line1,
             'shipping_address_line2': self.shipping_address_line2,

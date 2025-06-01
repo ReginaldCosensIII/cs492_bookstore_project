@@ -68,6 +68,26 @@ class Config:
             "in your environment variables or .env file."
         )
 
+    # --- Email Configurations ---
+    MAIL_SERVER: str = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+    MAIL_PORT: int = int(os.environ.get('MAIL_PORT', 587))
+    MAIL_USE_TLS: bool = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
+    MAIL_USERNAME: str | None = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD: str | None = os.environ.get('MAIL_APP_PASSWORD') # Use MAIL_APP_PASSWORD for clarity
+    MAIL_DEFAULT_SENDER: str = os.environ.get('MAIL_DEFAULT_SENDER', 'your-email@gmail.com')
+
+    # --- Initial Sanity Checks (add these) ---
+    if not MAIL_USERNAME or not MAIL_PASSWORD:
+        print(
+            "WARNING: [config.py] MAIL_USERNAME or MAIL_APP_PASSWORD environment variables are not set. "
+            "Email functionality will not work."
+        )
+    elif MAIL_USERNAME == 'your-email@gmail.com' and os.environ.get('FLASK_ENV', 'development').lower() == 'production':
+        print(
+            "CRITICAL SECURITY WARNING: [config.py] Default placeholder MAIL_USERNAME is being used "
+            "in what appears to be a production environment. Please configure your actual email credentials."
+        )
+
     @staticmethod
     def init_app(app):
         """
@@ -90,8 +110,19 @@ class Config:
                  "FLASK_SECRET_KEY is using the default development value in a production environment "
                  "(app.config['ENV'] == 'production') during init_app. This is highly insecure!"
             )
-        app_logger.debug("Config.init_app() completed its initializations (if any).")
+                          
+        if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
+            app_logger.warning(
+                "MAIL_USERNAME or MAIL_APP_PASSWORD not set in app.config during init_app. "
+                "Email functionality will be disabled."
+            )
 
+        elif app.config.get('MAIL_USERNAME') == 'your-email@gmail.com' and app.config.get("ENV") == "production":
+            app_logger.critical(
+                "Default placeholder MAIL_USERNAME is being used in production. Email configuration is insecure."
+            )
+
+        app_logger.debug("Config.init_app() completed its initializations (including mail config checks).")
 
 class DevelopmentConfig(Config):
     """

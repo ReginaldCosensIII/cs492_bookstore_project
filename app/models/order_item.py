@@ -104,7 +104,7 @@ class OrderItem:
             'order_id': self.order_id,
             'book_id': self.book_id,
             'quantity': self.quantity,
-            'unit_price_at_purchase': str(self.unit_price_at_purchase.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)), # Serialize Decimal as string
+            'unit_price_at_purchase': str(self.unit_price_at_purchase.quantize(Decimal("0.01"))) if self.unit_price_at_purchase is not None else "0.00", # String
             'item_total': str(item_total) # Already rounded
         }
         # Include denormalized book details if they were populated
