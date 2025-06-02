@@ -238,9 +238,7 @@ This project is developed for educational purposes as part of the CS492 curricul
 ## 👨‍💻 Authors
 
 * Reginald Cosens III
-* Dustin Keith
 * Edwin Zacarias
-* Lawrence Valdivia
 
 *Computer Science Students @ Colorado Technical University*
 *Passionate about building robust software and bringing innovative ideas to life!*
