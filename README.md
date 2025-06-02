@@ -1,12 +1,12 @@
-# 📚 CS492 Bookstore Project - v2.0 ✨
+# 📚 CS492 Bookstore Project - v2.3.1 ✨
 
-Welcome to the BookNook (v2.0)! This is a full-stack web application developed using Flask for an online bookstore. Originally a final project for CS492, this version represents a significant refactor focused on a robust, modular, and maintainable codebase, implementing core e-commerce functionalities and preparing for future expansion.
+Welcome to the BookNook (v2.3.1)! This is a full-stack web application developed using Flask for an online bookstore. Originally a final project for CS492, this version represents a significant refactor focused on a robust, modular, and maintainable codebase, implementing core e-commerce functionalities and preparing for future expansion.
 
 The application allows users to browse an extensive collection of books, create and manage user accounts, build a shopping cart (as guests or registered users), place orders, and manage book reviews. The backend leverages a PostgreSQL database and features user authentication with role-based access considerations for future admin and employee functionalities.
 
 ---
 
-## 🚀 Key Features & Enhancements in v2.0
+## 🚀 Key Features & Enhancements in v2.3.1
 
 This refactor introduced a more professional structure and several key features:
 
@@ -38,7 +38,7 @@ This refactor introduced a more professional structure and several key features:
     * AJAX-driven review display, submission, and deletion within book detail modals.
     * Ownership checks ensure users can only modify their own reviews.
     * `is_owner` flag provided by the API for frontend to conditionally show edit/delete buttons.
-* **🏗️ Application Architecture & Quality (v2.0 Refactor):**
+* **🏗️ Application Architecture & Quality (v2.3.1 Refactor):**
     * **Modular Design:** Flask Blueprints for `main`, `auth`, `cart`, `reviews` (API), and `order` concerns.
     * **Service Layer:** Encapsulates business logic, separating it from route handlers.
     * **Model Layer:** Clear data representation classes.
@@ -71,7 +71,7 @@ This refactor introduced a more professional structure and several key features:
 
 ---
 
-## 📁 Updated Project Structure (v2.0)
+## 📁 Updated Project Structure (v2.3.1)
 
 ```
 cs492_bookstore_project/
@@ -147,7 +147,7 @@ cs492_bookstore_project/
 ├── run.py                         # Application entry point / development server runner
 └── README.md                      # This file: Project overview, setup, and usage
 ```
-## 🔧 Setup and Installation (Local Development - v2.0)
+## 🔧 Setup and Installation (Local Development - v2.3.1)
 
 1.  **Prerequisites:**
     * Python (version 3.10 or newer recommended)
@@ -179,7 +179,7 @@ cs492_bookstore_project/
     * Ensure your PostgreSQL server is running.
     * Create a new database (e.g., `bookstore_v2_dev`).
     * Create a database user with necessary privileges for this database.
-    * **Important:** Manually create the tables in your PostgreSQL database using SQL DDL scripts according to the finalized schema for v2.0. This includes:
+    * **Important:** Manually create the tables in your PostgreSQL database using SQL DDL scripts according to the finalized schema for v2.3.1. This includes:
         * `users` (with `role`, address fields, `created_at`)
         * `books` (with `price` as `NUMERIC(10,2)`, `stock_quantity`, `image_url`, `description`, `created_at`, `updated_at`)
         * `reviews` (with `user_id`, `book_id`, `rating`, `comment`, `created_at`, and now `updated_at` - *you deferred this, so ensure your schema matches your code for now*)
