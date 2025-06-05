@@ -1,9 +1,12 @@
 # cs492_bookstore_project/app/utils.py
 
 import re
-from flask import current_app # For accessing app.logger and mail instance
-from flask_mail import Message # For creating email messages
-from app.logger import get_logger # Your custom logger
+from typing import Dict, List                                           # Added List for type hinting
+from flask import current_app                                           # For accessing app.logger and mail instance
+from flask_mail import Message                                          # For creating email messages
+from app.logger import get_logger                                       # Your custom logger
+from app.models.db import get_db_connection                             # For database interaction
+from app.services.exceptions import DatabaseError                       # For error handling
 from markupsafe import escape as markupsafe_escape 
 
 logger = get_logger(__name__) # Logger for this module
@@ -72,110 +75,60 @@ def normalize_whitespace(text):
     normalized_text = re.sub(r'\s+', ' ', text)
     return normalized_text.strip()
 
-# *** NEW EMAIL SENDING FUNCTION ***
-def send_email(to_recipient: str, subject: str, template_name_or_html_body: str, **kwargs):
+def get_admin_emails_dict() -> Dict[int, str]:
     """
-    Sends an email using Flask-Mail.
+    Retrieves a dictionary of all admin users' email addresses from the database.
 
-    It can either render an HTML template or use a pre-rendered HTML string as the body.
-    Configuration for Flask-Mail (sender, server, etc.) is expected to be set in the
-    Flask app configuration.
-
-    Args:
-        to_recipient (str): The primary recipient's email address.
-        subject (str): The subject line of the email.
-        template_name_or_html_body (str): The name of the Jinja2 template to render for the email body
-                                          (e.g., 'email/order_confirmation_email.html') OR
-                                          a string containing the fully rendered HTML body.
-        **kwargs: Keyword arguments to pass to `render_template` if `template_name_or_html_body`
-                  is a template name. These become the context for rendering the email template.
+    The role comparison is case-insensitive (e.g., 'admin', 'Admin', 'ADMIN').
+    The emails are returned as stored in the database (typically lowercase).
 
     Returns:
-        bool: True if the email was sent (or suppressed successfully), False on failure.
-
-    Raises:
-        RuntimeError: If called outside of an active Flask application context.
-    """
-    i = 0
-    print(i)
-    # Ensure we have access to the Flask app context for config and mail instance
-    if not current_app:
-        i = 1
-        print(i)
-        logger.error("send_email called outside of active Flask application context.")
-        # In a real scenario, you might re-raise or handle differently depending on how this util is used.
-        # For now, just log and return False if not in app context.
-        return False
-
-    # Get the mail instance from the current app's extensions
-    # This is a more robust way to get it within a function that might be called from various places.
-    mail_instance = current_app.extensions.get('mail')
-
-    if not mail_instance:
-        i = 2
-        print(i)
-        logger.error("Flask-Mail instance not found in current_app.extensions. Ensure it's initialized.")
-        return False
+        Dict[int, str]: A dictionary where keys are user_ids (int) and values 
+                        are email addresses (str) of admin users.
+                        Returns an empty dictionary if no admins are found or in case of an error.
     
-    i = 3
-    print(i)
-    # Determine if template_name_or_html_body is a template path or an HTML string
-    # A simple check: if it ends with .html (or .htm, .txt for text emails), assume it's a template.
-    is_template_path = template_name_or_html_body.lower().endswith(('.html', '.htm', '.txt'))
-
+    Raises:
+        DatabaseError: Propagates DatabaseError if a significant database issue occurs
+                       that prevents query execution or connection.
+    """
+    logger.info("Attempting to fetch email addresses for all admin users.")
+    admin_emails: Dict[int, str] = {}
+    conn = None
     try:
-        # Create the email message object
-        # MAIL_DEFAULT_SENDER should be configured in app.config
-        # If it's just an email like 'me@example.com', Flask-Mail uses it directly.
-        # If it's "Sender Name <me@example.com>", Flask-Mail parses it.
-        msg = Message(
-            subject=subject,
-            sender=current_app.config.get('MAIL_DEFAULT_SENDER', 'no-reply@booknook.example.com'),
-            recipients=[to_recipient] # Must be a list
-        )
+        conn = get_db_connection()
+        # Assumes your db.get_db_connection() uses RealDictCursor or similar
+        # to get results as dictionaries.
+        with conn.cursor() as cur:
+            # Query for users with the role 'admin' (case-insensitive)
+            # It's good practice to ensure 'role' is stored consistently (e.g., all lowercase)
+            # or use LOWER() in the query if case might vary.
+            cur.execute("SELECT user_id, email FROM users WHERE LOWER(role) = 'admin';")
+            admin_users_rows = cur.fetchall() # Returns a list of dict-like rows
+
+            if admin_users_rows:
+                for row in admin_users_rows:
+                    user_id = row.get('user_id')
+                    email = row.get('email')
+                    if user_id is not None and email is not None:
+                        admin_emails[user_id] = email
+                logger.info(f"Successfully fetched {len(admin_emails)} admin email addresses.")
+            else:
+                logger.info("No users with role 'admin' found in the database.")
         
-        i = 4
-        print(i)
+        return admin_emails
 
-        if is_template_path:
-            i = 5
-            print(i)
-            from flask import render_template # Local import to avoid issues if utils is imported early
-            logger.debug(f"Rendering email template: '{template_name_or_html_body}' with context: {kwargs}")
-            msg.html = render_template(template_name_or_html_body, **kwargs)
-            # You can also set msg.body for a plain text version:
-            # msg.body = render_template(template_name_or_html_body.replace('.html', '.txt'), **kwargs) # If you have a .txt version
-        else:
-            i = 6
-            print(i)
-            # Assume template_name_or_html_body is the pre-rendered HTML string
-            msg.html = template_name_or_html_body
-            # msg.body could be a stripped version or a plain text alternative passed via kwargs
-
-        if current_app.config.get('MAIL_SUPPRESS_SEND', False):
-            i = 7
-            print(i)
-            logger.info(f"Email sending suppressed (MAIL_SUPPRESS_SEND=True). Email to '{to_recipient}' with subject '{subject}' would have been sent.")
-            # For debugging, you could print the email content here if not using MAIL_BACKEND='console'
-            print("--- EMAIL TO BE SENT (SUPPRESSED) ---")
-            print(f"To: {to_recipient}")
-            print(f"From: {msg.sender}")
-            print(f"Subject: {subject}")
-            print("--- HTML Body ---")
-            print(msg.html)
-            print("-----------------------------------")
-            return True # Report as success if suppressed as per config       
-
-        i = 8
-        print(i)
-        mail_instance.send(msg)
-        logger.info(f"Email successfully sent to '{to_recipient}' with subject: '{subject}'")
-        return True
-
+    except DatabaseError as de: # Catch specific DatabaseError if raised by get_db_connection or cursor execution
+        logger.error(f"A known database error occurred while fetching admin emails: {de.log_message}", exc_info=True)
+        raise # Re-raise the specific DatabaseError to be handled by the caller
     except Exception as e:
-        i = 9
-        print(i)
-        logger.error(f"Failed to send email to '{to_recipient}' with subject '{subject}'. Error: {e}", exc_info=True)
-        # In a real app, you might want to queue this email for retry or notify admins.
-        return False
-# *** END OF NEW EMAIL SENDING FUNCTION ***
+        # Catch any other unexpected errors (e.g., psycopg2.Error if not wrapped, programming errors)
+        logger.error(f"An unexpected error occurred while fetching admin emails: {e}", exc_info=True)
+        # Wrap other exceptions in a custom DatabaseError for consistent error handling upstream.
+        raise DatabaseError(
+            message="Could not retrieve admin email addresses due to an unexpected server issue.",
+            original_exception=e
+        )
+    finally:
+        if conn:
+            conn.close()
+            logger.debug("Database connection closed after fetching admin emails.")
