@@ -1,8 +1,10 @@
 # app/services/order_service.py
-
+from app.utils import get_admin_emails_dict                                 # Utils function to return a dict of Admin emails
+from app.services.exceptions import DatabaseError
 from datetime import datetime                                               # For handling order dates and timestamps
 from app.models.order import Order                                          # Order model class
 from app.logger import get_logger                                           # Custom application logger
+from app.services.email_service import send_simple_email
 from decimal import Decimal, ROUND_HALF_UP                                  # For precise financial calculations
 from app.models.order_item import OrderItem                                 # OrderItem model class
 from app.models.db import get_db_connection                                 # For database connections
@@ -87,6 +89,27 @@ def create_order_from_cart(user_id: Optional[int],
                         f"Not enough stock for '{book.title.title()}'. Only {book.stock_quantity} available. Please update your cart.",
                         errors={'cart_item_stock': f"Insufficient stock for {book.title.title()}"}
                     )
+                
+                
+                if((book.stock_quantity - quantity) < 10):
+                    subject = f"ALERT: Stock quantity for '{book.title.title()}'is LOW!"
+                    message = f"The stock quantity for '{book.title.title()}', is at {book.stock_quantity-quantity} available books and is under our threshold. Please order new inventory and/or update inventory"
+
+                    try:
+                        admin_emails = get_admin_emails_dict()
+
+                        if admin_emails:
+                            
+                            for user_id, email in admin_emails.items():
+                                logger.info(f"Sending alert email to Admin User ID: {user_id}, to Email: {email}")
+                                send_simple_email(email, subject, message)
+                            
+                        else:
+                            logger.info("No admin users found.")
+
+                    except DatabaseError as e:
+                        logger.error(f"Error fetching admin emails: {e.user_facing_message}")
+
                 
                 price_at_purchase = book.price 
                 item_total = price_at_purchase * Decimal(quantity)

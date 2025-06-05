@@ -94,3 +94,78 @@ def send_email(to_email: str, subject: str, template_path: str, **context_for_te
             log_message=f"Unexpected email sending error: {e}",
             original_exception=e
         )
+    
+def send_simple_email(to_email: str, subject: str, body_text: str) -> bool:
+    """
+    Sends a plain text email using SMTP configuration from the Flask app config.
+
+    Args:
+        to_email (str): The recipient's email address.
+        subject (str): The subject of the email.
+        body_text (str): The plain text content for the email body.
+
+    Returns:
+        bool: True if the email was sent successfully or suppressed, False on failure.
+
+    Raises:
+        AppException: If email configuration is missing or if sending fails critically.
+                      (Currently logs errors and returns False for sending failures).
+    """
+    if not current_app:
+        logger.error("send_simple_email called outside of active Flask application context.")
+        return False
+
+    mail_server = current_app.config.get('MAIL_SERVER')
+    mail_port = current_app.config.get('MAIL_PORT')
+    mail_use_tls = current_app.config.get('MAIL_USE_TLS')
+    mail_username = current_app.config.get('MAIL_USERNAME')
+    mail_password = current_app.config.get('MAIL_PASSWORD')
+    mail_default_sender = current_app.config.get('MAIL_DEFAULT_SENDER', mail_username)
+
+    if not all([mail_server, mail_port, mail_username, mail_password, mail_default_sender]):
+        logger.error(
+            "Email configuration incomplete. Required MAIL_* settings are missing."
+        )
+        # Depending on strictness, you might raise AppException here or just return False
+        # For now, let's make it explicit for the caller to handle
+        # raise AppException("Email service not configured.", log_message="Email config missing.")
+        return False # Indicate failure due to config
+
+    if current_app.config.get('MAIL_SUPPRESS_SEND', False):
+        logger.info(f"Email sending suppressed (MAIL_SUPPRESS_SEND=True).")
+        logger.info(f"--- Would send to: {to_email} ---")
+        logger.info(f"--- Subject: {subject} ---")
+        logger.info(f"--- Body ---\n{body_text}\n--- End Body ---")
+        return True # Report as success if suppressed
+
+    # Create a plain text message
+    msg = MIMEText(body_text, 'plain', 'utf-8') # Specify plain text and encoding
+    msg['From'] = mail_default_sender
+    msg['To'] = to_email
+    msg['Subject'] = subject
+
+    try:
+        logger.info(f"Attempting to send email to '{to_email}' with subject '{subject}' from '{mail_default_sender}'.")
+        # Ensure port is integer
+        port = int(mail_port) if isinstance(mail_port, (str, int)) else 587 
+        
+        with smtplib.SMTP(mail_server, port) as server:
+            if mail_use_tls:
+                server.starttls()
+            server.login(mail_username, mail_password)
+            server.sendmail(mail_default_sender, to_email, msg.as_string())
+        logger.info(f"Email successfully sent to '{to_email}'.")
+        return True
+    except smtplib.SMTPAuthenticationError as e:
+        logger.error(f"SMTP Authentication Error sending email to '{to_email}': {e}", exc_info=True)
+        # For now, just log and return False. Caller can flash messages.
+        return False
+    except smtplib.SMTPException as e: # Covers other SMTP related errors (e.g., connection, send failures)
+        logger.error(f"SMTP Error sending email to '{to_email}': {e}", exc_info=True)
+        return False
+    except ConnectionRefusedError as e: # Specific catch for connection refusal
+        logger.error(f"ConnectionRefusedError sending email to '{to_email}': {e}", exc_info=True)
+        return False
+    except Exception as e: # Catch any other unexpected errors
+        logger.error(f"Unexpected error sending email to '{to_email}': {e}", exc_info=True)
+        return False
