@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Frequently Asked Questions - Atomics BookNook{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <h1 class="mb-4 text-center display-5">Frequently Asked Questions</h1>
+
+    <div class="card shadow-sm p-4">
+        <p class="lead">Welcome to our FAQ section! We've compiled a list of common questions to help you find answers quickly. If you can't find what you're looking for here, please don't hesitate to <a href="{{ url_for('main.contact_page') }}" class="alert-link">contact us</a>.</p>
+
+        <div class="accordion accordion-flush" id="faqAccordion">
+
+            <h3 class="mt-4 pt-3 border-top">Ordering & Accounts</h3>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                        1. How do I create an account?
+                    </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Click on the "Sign Up" or "Register" link in the top right corner of our homepage. Follow the prompts to enter your details and create your Atomics BookNook account.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingTwo">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                        2. Do I need an account to place an order?
+                    </button>
+                </h2>
+                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        No, you can check out as a guest. However, creating an account allows you to track your orders, view your order history, save your shipping information for faster checkout, and receive personalized recommendations.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingThree">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                        3. How do I place an order?
+                    </button>
+                </h2>
+                <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Browse our selection, add desired books to your cart, and proceed to checkout. Follow the on-screen instructions to enter your shipping and payment information.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingFour">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                        4. How can I track my order?
+                    </button>
+                </h2>
+                <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        If you have an account, log in and navigate to your "Order History" under "My Profile". If you checked out as a guest, you will receive an order confirmation email with a tracking link once your order has shipped.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingFive">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                        5. Can I modify or cancel my order after it's been placed?
+                    </button>
+                </h2>
+                <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        We process orders quickly. If you need to modify or cancel an order, please contact us immediately at <a href="mailto:orders@atomicsbooknook.com">orders@atomicsbooknook.com</a>. We will do our best to accommodate your request, but we cannot guarantee changes once an order has entered the shipping process.
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="mt-4 pt-3 border-top">Shipping & Delivery</h3>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingSix">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSix" aria-expanded="false" aria-controls="collapseSix">
+                        6. What shipping options do you offer?
+                    </button>
+                </h2>
+                <div id="collapseSix" class="accordion-collapse collapse" aria-labelledby="headingSix" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        We offer various shipping options including standard, expedited, and express delivery. Shipping costs and estimated delivery times will be calculated at checkout based on your location and chosen shipping method.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingSeven">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSeven" aria-expanded="false" aria-controls="collapseSeven">
+                        7. Do you ship internationally?
+                    </button>
+                </h2>
+                <div id="collapseSeven" class="accordion-collapse collapse" aria-labelledby="headingSeven" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Yes, Atomics BookNook ships to many international destinations. International shipping costs and delivery times vary. Please enter your address at checkout to see if we ship to your location and to calculate the shipping cost.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingEight">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEight" aria-expanded="false" aria-controls="collapseEight">
+                        8. How long does shipping take?
+                    </button>
+                </h2>
+                <div id="collapseEight" class="accordion-collapse collapse" aria-labelledby="headingEight" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Domestic standard shipping typically takes 5-7 business days. Expedited and express options are faster. International shipping can take 7-21 business days depending on the destination and customs. Please note these are estimates and can vary.
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="mt-4 pt-3 border-top">Returns & Refunds</h3>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingNine">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNine" aria-expanded="false" aria-controls="collapseNine">
+                        9. What is your return policy?
+                    </button>
+                </h2>
+                <div id="collapseNine" class="accordion-collapse collapse" aria-labelledby="headingNine" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        We accept returns of new, unopened books within 30 days of delivery. The item must be in its original condition. Please see our full <a href="#" class="alert-link" disabled>Returns Policy page (Theoretical Link)</a> for complete details and instructions on how to initiate a return.
+                        {# You would replace the '#' with a url_for to your actual returns policy page if implemented.
+                           e.g., <a href="{{ url_for('main.returns_policy_route') }}" class="alert-link">Returns Policy page</a> #}
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingTen">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTen" aria-expanded="false" aria-controls="collapseTen">
+                        10. How do I return an item?
+                    </button>
+                </h2>
+                <div id="collapseTen" class="accordion-collapse collapse" aria-labelledby="headingTen" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Please contact <a href="mailto:support@atomicsbooknook.com">support@atomicsbooknook.com</a> to initiate a return. We will provide you with instructions and a return shipping label if applicable.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingEleven">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEleven" aria-expanded="false" aria-controls="collapseEleven">
+                        11. When will I receive my refund?
+                    </button>
+                </h2>
+                <div id="collapseEleven" class="accordion-collapse collapse" aria-labelledby="headingEleven" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Once we receive and inspect your returned item, your refund will be processed to your original payment method within 5-7 business days. Shipping charges are non-refundable unless the return is due to our error.
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="mt-4 pt-3 border-top">Payments & Security</h3>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingTwelve">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwelve" aria-expanded="false" aria-controls="collapseTwelve">
+                        12. What payment methods do you accept?
+                    </button>
+                </h2>
+                <div id="collapseTwelve" class="accordion-collapse collapse" aria-labelledby="headingTwelve" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        We accept major credit cards (Visa, MasterCard, American Express, Discover), PayPal, and other popular digital payment options. (Adjust this to match your actual payment gateway integrations if any).
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingThirteen">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThirteen" aria-expanded="false" aria-controls="collapseThirteen">
+                        13. Is my payment information secure?
+                    </button>
+                </h2>
+                <div id="collapseThirteen" class="accordion-collapse collapse" aria-labelledby="headingThirteen" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Yes, absolutely. Atomics BookNook uses industry-standard SSL encryption to protect your personal and payment information during all transactions. We do not store your credit card details on our servers.
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="mt-4 pt-3 border-top">Other Questions</h3>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingFourteen">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFourteen" aria-expanded="false" aria-controls="collapseFourteen">
+                        14. Do you offer gift cards?
+                    </button>
+                </h2>
+                <div id="collapseFourteen" class="accordion-collapse collapse" aria-labelledby="headingFourteen" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Yes, Atomics BookNook gift cards are available for purchase in various denominations. They are the perfect gift for any book lover!
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingFifteen">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFifteen" aria-expanded="false" aria-controls="collapseFifteen">
+                        15. How can I stay updated on new releases and promotions?
+                    </button>
+                </h2>
+                <div id="collapseFifteen" class="accordion-collapse collapse" aria-labelledby="headingFifteen" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Sign up for our newsletter at the bottom of our homepage! You can also follow us on our social media channels.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
