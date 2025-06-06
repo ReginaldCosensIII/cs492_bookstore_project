@@ -5,10 +5,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}BookNook{% endblock %} - Your Next Chapter</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    {# Assuming atomic_logo.ico is in app/static/images/ based on your previous atomic_logo.svg path #}
-    {# If atomic_logo.ico is directly in app/static/, change filename to 'atomic_logo.ico' #}
     <link rel="icon" href="{{ url_for('static', filename='images/atomic_logo.ico') }}" type="image/x-icon"> 
     {% block head_extra %}{% endblock %}
 </head>
@@ -18,9 +16,6 @@
         <nav class="navbar navbar-expand-lg navbar-dark">
             <div class="container">
                 <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.home') }}">
-                    {# YOUR EMBEDDED SVG LOGO - Preserved #}
-                    {# If you decide to use an external SVG file later, you can change this to an <img> tag #}
-                    {# For example: <img src="{{ url_for('static', filename='images/atomic_logo.svg') }}" alt="BookNook Logo" width="90" height="90" class="me-2"> #}
                     <svg width="90" height="90" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="me-2">
                         <defs>
                             <linearGradient id="quantumGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -52,14 +47,14 @@
                         <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'main.home' %}active fw-bold{% endif %}" href="{{ url_for('main.home') }}">Home</a>
                         </li>
-                        <li class="nav-item {% if not current_user.is_authenticated %}me-3{% else %}me-2{% endif %}"> {# Conditional margin based on auth state #}
+                        <li class="nav-item {% if not current_user.is_authenticated %}me-3{% else %}me-2{% endif %}">
                             <a class="nav-link position-relative {% if request.endpoint == 'cart.view_cart_route' %}active fw-bold{% endif %}" href="{{ url_for('cart.view_cart_route') }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-cart3 me-1" viewBox="0 0 16 16">
                                     <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .49.598l-1 5a.5.5 0 0 1-.465.401l-9.397.472L4.744 11.5H13a.5.5 0 0 1 0 1H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.102 4l.84 4.479 9.144-.459L13.89 4H3.102zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
                                 </svg>
                                 Cart
                                 <span id="cart-item-count-badge-navbar" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65em; display: none;">
-                                    0 {# Initial value, will be updated by JS #}
+                                    0
                                 </span>
                             </a>
                         </li>
@@ -74,9 +69,9 @@
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
                                     <li><a class="dropdown-item" href="{{ url_for('main.profile_page') }}">My Profile</a></li>
-                                    {% if current_user.is_admin() %} {# Simplified check, assuming User model has is_admin() #}
+                                    {% if current_user.is_admin() %}
                                         <li><a class="dropdown-item" href="{{ url_for('admin.dashboard') }}">Admin Dashboard</a></li>
-                                    {% elif current_user.is_employee() %}  {# Assuming User model has is_employee() #}
+                                    {% elif current_user.is_employee() %}
                                          <li><a class="dropdown-item disabled" href="#">Employee Dashboard (Soon)</a></li>
                                     {% endif %}
                                     <li><hr class="dropdown-divider"></li>
@@ -84,7 +79,6 @@
                                 </ul>
                             </li>
                         {% else %}
-                            {# Your conditional logic for showing login/register or not #}
                             {% if show_nav is not defined or show_nav %} 
                             <li class="nav-item">
                                 <a href="{{ url_for('auth.login', next=request.full_path if request.endpoint not in ['auth.login', 'auth.register'] else None) }}" class="btn btn-outline-light btn-sm me-2">Login</a>
@@ -123,7 +117,6 @@
 
     <footer class="footer mt-auto py-3 bg-dark text-light border-top">
         <div class="container text-center">
-            {# ... (Your existing footer content from message #87) ... #}
              <div class="row align-items-center">
                 <div class="col-md-4 mb-3 mb-md-0 text-md-start">
                     <h5>BookNook</h5>
@@ -132,9 +125,9 @@
                 <div class="col-md-4 mb-3 mb-md-0">
                     <ul class="list-inline mb-0">
                         <li class="list-inline-item"><a href="{{ url_for('main.home') }}" class="text-white-50 text-decoration-none">Home</a></li>
-                        <li class="list-inline-item"><a href="#" class="text-white-50 text-decoration-none">About</a></li>
-                        <li class="list-inline-item"><a href="#" class="text-white-50 text-decoration-none">Contact</a></li>
-                        <li class="list-inline-item"><a href="#" class="text-white-50 text-decoration-none">FAQ</a></li>
+                        <li class="list-inline-item"><a href="{{ url_for('main.about_page') }}" class="text-white-50 text-decoration-none">About</a></li>
+                        <li class="list-inline-item"><a href="{{ url_for('main.contact_page') }}" class="text-white-50 text-decoration-none">Contact</a></li>
+                        <li class="list-inline-item"><a href="{{ url_for('main.faq_page') }}" class="text-white-50 text-decoration-none">FAQ</a></li>
                     </ul>
                 </div>
                 <div class="col-md-4 text-md-end">
@@ -152,39 +145,20 @@
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
     
-    {# *** ADDED/MODIFIED SCRIPT BLOCK for initial data *** #}
     <script>
-        // Make current_user.id available to JavaScript if user is authenticated, otherwise null.
         window.currentUserId = {{ current_user.id|tojson if current_user.is_authenticated else 'null' }};
-        
-        // Make initial cart item count available to JavaScript for navbar badge initialization.
-        // This 'navbar_cart_item_count' variable is injected by the context processor in app/__init__.py.
         window.initialCartData = {
             itemCount: {{ navbar_cart_item_count | default(0) }}
-            // If you were also passing the cart total string from the context processor:
-            // cartTotalStr: "{{ navbar_cart_total_str | default('0.00') }}"
         };
-
-        // If your home.html/customer.html pages pass a booksData object (for modals):
-        // This needs to be defined on pages where `books_data_for_js` is passed to the template.
-        // {% if books_data_for_js is defined %}
-        // window.booksData = {{ books_data_for_js | tojson | safe }};
-        // {% else %}
-        // window.booksData = {}; // Define as empty object if not passed, to avoid JS errors
-        // {% endif %}
     </script>
 
     <script src="{{ url_for('static', filename='js/utils.js') }}" defer></script> 
     <script src="{{ url_for('static', filename='js/navbar_cart_updater.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/cart_handler.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/review_handler.js') }}" defer></script>
-    {# The old submit_review.js functionality should now be in review_handler.js #}
-    {# Ensure it's removed or its content merged and the old file deleted from static/js #}
-    {# <script src="{{ url_for('static', filename='js/submit_review.js') }}" defer></script> #}
 
-    {# Block for page-specific JavaScript files or inline scripts #}
     {% block scripts %}{% endblock %} 
 </body>
 </html>

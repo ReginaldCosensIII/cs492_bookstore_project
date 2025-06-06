@@ -205,5 +205,23 @@ def profile_page():
                            reviews=user_reviews_list 
                            )
 
+@main_bp.route('/about')
+def about_page():
+    """Renders the About Us page."""
+    logger.info("Route: About Us page requested.")
+    return render_template('about.html')
+
+@main_bp.route('/faq')
+def faq_page():
+    """Renders the FAQ page."""
+    logger.info("Route: FAQ page requested.")
+    return render_template('faq.html')
+
+@main_bp.route('/contact')
+def contact_page():
+    """Renders the Contact Us page."""
+    logger.info("Route: Contact Us page requested.")
+    return render_template('contact.html')
+
 # Removed old /admin-dashboard and /employee-dashboard routes from main_bp.
 # These will now be handled by their own dedicated blueprints (e.g., app.admin).

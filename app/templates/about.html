@@ -1,0 +1,50 @@
+{# /app/templates/about.html #}
+{% extends "base.html" %}
+
+{% block title %}About Us - BookNook{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="text-center border-bottom pb-4 mb-4">
+        <h1 class="display-4">About Atomic's BookNook</h1>
+        <p class="lead">Discover Your Next Chapter, With Us.</p>
+    </div>
+
+    <div class="row g-5 align-items-center">
+        <div class="col-md-6">
+            <h2>Our Story</h2>
+            <p>Founded in 2024 by two passionate Computer Science students from Colorado Technical University, BookNook was born from a shared love for literature and technology. We believe that discovering a new book should be an adventure, and our mission is to create a seamless and enjoyable online bookstore experience for readers everywhere.</p>
+            <p>Our project started as a final assignment for CS492, but quickly grew into a passion project. We've poured our knowledge of software development, database management, and user-centric design into creating a platform that is both robust and easy to use. We are dedicated to the principles of continuous improvement and are always looking for ways to make BookNook better for our community of readers.</p>
+        </div>
+        <div class="col-md-6 text-center">
+            <img src="{{ url_for('static', filename='images/atomic_logo.ico') }}" alt="BookNook Logo" class="img-fluid rounded-circle shadow-sm" style="max-width: 250px;">
+        </div>
+    </div>
+
+    <hr class="my-5">
+
+    <div class="text-center">
+        <h2 class="mb-4">Meet the Team</h2>
+    </div>
+
+    <div class="row text-center justify-content-center">
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <h5 class="card-title mb-1">Reginald Cosens III</h5>
+                    <p class="card-text text-muted">Frontend & Backend Developer</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <h5 class="card-title mb-1">Edwin Zacarias</h5>
+                    <p class="card-text text-muted">Project Manager & QA Systems Engineer</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
