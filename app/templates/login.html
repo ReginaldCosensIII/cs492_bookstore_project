@@ -1,20 +1,56 @@
+{# cs492_bookstore_project/app/templates/login.html #}
 {% set show_nav = False %}
 {% extends 'base.html' %}
 
-{% block title %}Login{% endblock %}
+{% block title %}Login - Atomic's BookNook{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">Login</h2>
-<form method="post">
-    <div class="mb-3">
-        <label for="email" class="form-label">Email</label>
-        <input name="email" type="email" class="form-control" required>
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-5 col-xl-4">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <!-- BookNook Logo SVG -->
+                    <svg width="90" height="90" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="mb-3">
+                        <defs>
+                            <linearGradient id="quantumGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#5A189A;stop-opacity:1"></stop>
+                                <stop offset="100%" style="stop-color:#00FFFF;stop-opacity:1"></stop>
+                            </linearGradient>
+                        </defs>
+                        <rect x="42" y="42" width="16" height="16" fill="url(#quantumGradient)" rx="2"></rect>
+                        <path d="M 50 42 V 58" stroke="#C0C0C0" stroke-width="1"></path> 
+                        <ellipse cx="50" cy="50" rx="40" ry="15" fill="none" stroke="#C0C0C0" stroke-width="1.5" transform="rotate(45 50 50)"></ellipse>
+                        <ellipse cx="50" cy="50" rx="40" ry="15" fill="none" stroke="#C0C0C0" stroke-width="1.5" transform="rotate(-45 50 50)"></ellipse>
+                        <circle cx="50" cy="10" r="3" fill="#00FFFF"></circle>
+                        <circle cx="18" cy="32" r="3" fill="#5A189A"></circle>
+                        <circle cx="82" cy="68" r="3" fill="#00FFFF"></circle>
+                    </svg>
+                    <h2 class="h3 mb-3 fw-normal">Atomic's BookNook</h2>
+                </div>
+                
+                <form method="post" novalidate>
+                    <div class="form-floating mb-3">
+                        <input name="email" type="email" class="form-control" id="floatingEmail" placeholder="name@example.com" required autofocus>
+                        <label for="floatingEmail">Email address</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input name="password" type="password" class="form-control" id="floatingPassword" placeholder="Password" required>
+                        <label for="floatingPassword">Password</label>
+                    </div>
+
+                    <button class="w-100 btn btn-lg btn-primary mb-3" type="submit">Log In</button>
+                    
+                    <div class="text-center">
+                        <p class="mb-0">Don't have an account?</p>
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-outline-secondary w-100">Register Here</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="text-center mt-3">
+             <a href="{{ url_for('main.home') }}" class="text-muted text-decoration-none"><small>&laquo; Back to Store</small></a>
+        </div>
     </div>
-    <div class="mb-3">
-        <label for="password" class="form-label">Password</label>
-        <input name="password" type="password" class="form-control" required>
-    </div>
-    <button type="submit" class="btn btn-primary">Login</button>
-    <a href="{{ url_for('auth.register') }}" class="btn btn-secondary ms-2">Register</a>
-</form>
+</div>
 {% endblock %}

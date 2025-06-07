@@ -223,5 +223,17 @@ def contact_page():
     logger.info("Route: Contact Us page requested.")
     return render_template('contact.html')
 
-# Removed old /admin-dashboard and /employee-dashboard routes from main_bp.
-# These will now be handled by their own dedicated blueprints (e.g., app.admin).
+@main_bp.route('/privacy-policy')
+def privacy_policy_page():
+    """Renders the Privacy Policy page."""
+    logger.info("Route: Privacy Policy page requested.")
+    return render_template('privacy_policy.html')
+
+@main_bp.route('/terms-of-service')
+def terms_of_service_page():
+    """Renders the Terms of Service page."""
+    logger.info("Route: Terms of Service page requested.")
+    return render_template('terms_of_service.html')
+
+# Note: The routes for /admin-dashboard and /employee-dashboard have been removed.
+# They will be handled by their own dedicated blueprints (e.g., app.admin).

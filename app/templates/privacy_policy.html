@@ -1,0 +1,55 @@
+{# /app/templates/privacy_policy.html #}
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy - Atomic's BookNook{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="text-center border-bottom pb-4 mb-4">
+        <h1 class="display-4">Privacy Policy</h1>
+        <p class="lead text-muted">Last Updated: June 7, 2025</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <p>Your privacy is important to us. It is Atomic's BookNook's policy to respect your privacy regarding any information we may collect from you across our website, <a href="{{ url_for('main.home') }}">{{ request.host_url }}</a>, and other sites we own and operate.</p>
+
+            <h4 class="mt-4">1. Information We Collect</h4>
+            <p>We only ask for personal information when we truly need it to provide a service to you. We collect it by fair and lawful means, with your knowledge and consent. We also let you know why we’re collecting it and how it will be used. The personal information we collect may include:</p>
+            <ul>
+                <li><strong>Contact Information:</strong> Your name (first and last), email address, and phone number.</li>
+                <li><strong>Shipping Information:</strong> Your shipping address (including address line 1, address line 2, city, state, and zip code) for order fulfillment.</li>
+                <li><strong>Account Information:</strong> Your username and password hash (we never store plain text passwords).</li>
+                <li><strong>Order Information:</strong> Details of the books you purchase, order dates, and transaction history.</li>
+                <li><strong>User-Generated Content:</strong> Reviews, ratings, and comments you choose to post on our website.</li>
+            </ul>
+
+            <h4 class="mt-4">2. How We Use Your Information</h4>
+            <p>We use the information we collect in various ways, including to:</p>
+            <ul>
+                <li>Provide, operate, and maintain our website</li>
+                <li>Process your transactions and manage your orders</li>
+                <li>Improve, personalize, and expand our website</li>
+                <li>Communicate with you, either directly or through one of our partners, including for customer service, to provide you with updates and other information relating to the website, and for marketing and promotional purposes (with your consent)</li>
+                <li>Send you emails, such as order confirmations and shipping notifications</li>
+                <li>Find and prevent fraud</li>
+            </ul>
+
+            <h4 class="mt-4">3. Security of Your Data</h4>
+            <p>We take the security of your data seriously. We protect the information we collect within commercially acceptable means to prevent loss and theft, as well as unauthorized access, disclosure, copying, use, or modification. However, no method of transmission over the Internet or electronic storage is 100% secure, and we cannot guarantee its absolute security.</p>
+
+            <h4 class="mt-4">4. Cookies</h4>
+            <p>We use cookies to help us improve your access to our site and identify repeat visitors. Cookies can also enable us to track and target the interests of our users to enhance the experience on our site. Usage of a cookie is in no way linked to any personally identifiable information on our site.</p>
+            
+            <h4 class="mt-4">5. Your Rights</h4>
+             <p>You are free to refuse our request for your personal information, with the understanding that we may be unable to provide you with some of your desired services. You have the right to access the personal data we hold about you and to ask that your personal data be corrected, updated, or deleted.</p>
+
+            <h4 class="mt-4">6. Changes to This Privacy Policy</h4>
+            <p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page. You are advised to review this Privacy Policy periodically for any changes. Changes to this Privacy Policy are effective when they are posted on this page.</p>
+
+            <h4 class="mt-4">7. Contact Us</h4>
+            <p>If you have any questions about this Privacy Policy, please <a href="{{ url_for('main.contact_page') }}">contact us</a>.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
