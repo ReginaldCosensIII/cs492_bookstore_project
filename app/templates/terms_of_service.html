@@ -1,0 +1,42 @@
+{# /app/templates/terms_of_service.html #}
+{% extends "base.html" %}
+
+{% block title %}Terms of Service - BookNook{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="text-center border-bottom pb-4 mb-4">
+        <h1 class="display-4">Terms of Service</h1>
+        <p class="lead text-muted">Last Updated: June 7, 2025</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <h4>1. Agreement to Terms</h4>
+            <p>By accessing our website, BookNook, you agree to be bound by these Terms of Service, all applicable laws and regulations, and agree that you are responsible for compliance with any applicable local laws. If you do not agree with any of these terms, you are prohibited from using or accessing this site. The materials contained in this website are protected by applicable copyright and trademark law.</p>
+
+            <h4>2. User Accounts</h4>
+            <p>When you create an account with us, you must provide us with information that is accurate, complete, and current at all times. Failure to do so constitutes a breach of the Terms, which may result in immediate termination of your account on our Service. You are responsible for safeguarding the password that you use to access the Service and for any activities or actions under your password.</p>
+
+            <h4>3. User Content (Reviews)</h4>
+            <p>Our Service allows you to post, link, store, share and otherwise make available certain information, text, graphics, or other material ("Content"). You are responsible for the Content that you post on or through the Service, including its legality, reliability, and appropriateness. By posting Content, you grant us the right and license to use, modify, publicly perform, publicly display, reproduce, and distribute such Content on and through the Service. You retain any and all of your rights to any Content you submit.</p>
+            <p>We reserve the right to remove any content that is deemed inappropriate, offensive, or violates any party's intellectual property or these Terms.</p>
+            
+            <h4>4. Purchases</h4>
+            <p>If you wish to purchase any product made available through the Service ("Purchase"), you may be asked to supply certain information relevant to your Purchase including, without limitation, your shipping information and email address. You represent and warrant that you have the legal right to use any payment method(s) in connection with any Purchase.</p>
+
+            <h4>5. Limitation of Liability</h4>
+            <p>In no event shall BookNook, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.</p>
+
+            <h4>6. Governing Law</h4>
+            <p>These Terms shall be governed and construed in accordance with the laws of Maryland, United States, without regard to its conflict of law provisions.</p>
+            
+            <h4>7. Changes</h4>
+            <p>We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material we will provide at least 30 days' notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.</p>
+            
+            <h4 class="mt-4">8. Contact Us</h4>
+            <p>If you have any questions about these Terms, please <a href="{{ url_for('main.contact_page') }}">contact us</a>.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
