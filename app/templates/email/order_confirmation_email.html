@@ -3,25 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your BookNook Order Confirmation (ID: {{ order.order_id if order and order.order_id is defined else 'N/A' }})</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
-        .container { max-width: 600px; margin: 20px auto; padding: 20px; background-color: #fff; border: 1px solid #ddd; border-radius: 5px; }
-        .header { text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
-        .header h1 { margin: 0; color: #5A189A; } /* Purple like your logo */
-        .order-details th, .order-details td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: middle; } /* Added vertical-align */
-        .order-details th { background-color: #f9f9f9; }
-        .order-details { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .footer { text-align: center; margin-top: 20px; font-size: 0.9em; color: #777; }
-        .total-row strong { color: #5A189A; }
-        a { color: #007bff; text-decoration: none; }
-        .book-image { max-width: 60px; max-height: 80px; margin-right: 10px; border: 1px solid #eee; } /* Style for book image */
-    </style>
+    <title>Atomic BookNook - Order Confirmation (ID: {{ order.order_id if order and order.order_id is defined else 'N/A' }})</title>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>BookNook Order Confirmation</h1>
+<body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.6; color: #333333; margin: 0; padding: 0; background-color: #f7f9fc;">
+    <div style="max-width: 600px; margin: 40px auto; padding: 30px; background-color: #ffffff; border: 1px solid #e1e4e8; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #5A189A;">
+            <h1 style="margin: 0; color: #5A189A; font-size: 28px; letter-spacing: -0.5px;">Atomic BookNook</h1>
+            <p style="margin: 5px 0 0 0; color: #6c757d; font-size: 14px;">Order Confirmation</p>
         </div>
 
         <p>Dear {{ user_name or 'Valued Customer' }},</p>
