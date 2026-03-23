@@ -41,13 +41,12 @@
                 
                 {# --- Start of Embedded Book Card & Its Modal (Structure from your customer.html) --- #}
                 <div class="col d-flex align-items-stretch">
-                    <div class="card h-100 shadow-sm w-100">
+                    <div class="card h-100 shadow-sm w-100 book-card">
                         <div class="row g-0 h-100">
                             <div class="col-md-4 d-flex align-items-center justify-content-center p-3">
                                 <img src="{{ book_obj.image_url or url_for('static', filename='images/placeholder_book.png') }}"
-                                     class="img-fluid rounded-start"
+                                     class="book-cover-image"
                                      alt="Cover of {{ book_obj.title.title() if book_obj.title else 'Book' }}"
-                                     style="max-height: 200px; object-fit: contain;"
                                      onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/placeholder_book_error.png') }}';">
                             </div>
                             <div class="col-md-8">
