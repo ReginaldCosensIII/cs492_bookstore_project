@@ -57,6 +57,23 @@ This refactor introduced a more professional structure and several key features:
 
 ---
 
+## 🏛️ Application Architecture Updates
+
+### Database Seeding Pipeline
+The project utilizes an automated, idempotent seeding pipeline (`scripts/ultimate_seed.py`) to generate reliable mock data. It performs the following:
+*   **API Integration:** Fetches real book data (fiction, sci-fi, etc.) directly from the Open Library Search API in a single HTTP request to avoid rate limits.
+*   **Guaranteed Covers:** Leverages the `cover_i` Open Library property to guarantee high-quality cover images for all generated books.
+*   **Self-joining Deduplication:** Implements a raw SQL self-join `DELETE ... USING` query to eliminate duplicate book titles while carefully preserving the row with the lowest `book_id`. This strategy maintains critical foreign key constraints with existing `order_items` and order history.
+*   **Safe Execution:** To seed your database with ~120 books, run: `python scripts/ultimate_seed.py`
+
+### UI Architecture (CSS Uniformity)
+Book cover presentation is governed by a physical book layout model built directly into `styles.css`.
+*   **Visual Consistency:** The `.book-cover-image` class enforces visual uniformity across the application by discarding inline height/width styles in favor of a strict CSS `aspect-ratio: 2/3`.
+*   **Responsive Scaling:** Utilizing `object-fit: cover` ensures that images of varying original dimensions scale cleanly into the grid without stretching or distortion.
+*   **Skeuomorphic Touches:** An asymmetrical `border-radius` and a carefully layered inset `box-shadow` create a 3D physical book spine effect, eliminating the need for complex image framing assets.
+
+---
+
 ## 🛠️ Tech Stack
 
 * **Backend:** Python (3.10+), Flask

@@ -36,3 +36,14 @@
     background-color: #cce5ff;
     color: #004085;
 }
+
+/* Physical book cover: uniform 2:3 portrait ratio with spine shading */
+.book-cover-image {
+    width: 100%;
+    aspect-ratio: 2 / 3; /* Forces a uniform vertical rectangle */
+    object-fit: cover; /* Crops to fit perfectly without distortion */
+    object-position: center top;
+    border-radius: 2px 10px 10px 2px; /* Sharp left spine, rounded right pages */
+    box-shadow: -4px 0 6px rgba(0,0,0,0.2) inset, 2px 2px 5px rgba(0,0,0,0.1); /* 3D spine crease + drop shadow */
+    background-color: #f8f9fa; /* Fallback while image loads */
+}
