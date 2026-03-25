@@ -47,3 +47,27 @@
     box-shadow: -4px 0 6px rgba(0,0,0,0.2) inset, 2px 2px 5px rgba(0,0,0,0.1); /* 3D spine crease + drop shadow */
     background-color: #f8f9fa; /* Fallback while image loads */
 }
+
+.img-skeleton-wrapper {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 2px 10px 10px 2px;
+    overflow: hidden;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.book-cover-image {
+    opacity: 0; 
+    transition: opacity 0.4s ease-in-out; 
+}
+
+.book-cover-image.loaded {
+    opacity: 1; 
+}
