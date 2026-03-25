@@ -159,58 +159,139 @@
 
         {# Modern Pagination and Per-Page Controls #}
         {% if books %}
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-5 mb-4 pt-4 border-top">
+        <style>
+            /* Modern Pagination Fix embedded to bypass CSS cache */
+            .modern-pagination {
+                display: flex !important;
+                list-style: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                align-items: center !important;
+                gap: 0.5rem !important; /* Increased gap */
+            }
+            .modern-pagination .page-item a.page-link,
+            .modern-pagination .page-item span.page-link {
+                border: none !important;
+                background: transparent !important;
+                color: #6b7280 !important;
+                font-weight: 500 !important;
+                font-size: 0.95rem !important;
+                width: 40px !important;
+                height: 40px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                border-radius: 50% !important;
+                text-decoration: none !important;
+                transition: all 0.2s ease !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+            }
+            .modern-pagination .page-item:first-child a.page-link,
+            .modern-pagination .page-item:last-child a.page-link {
+                width: auto !important;
+                padding: 0 1rem !important;
+                border-radius: 8px !important;
+                box-shadow: none !important;
+                gap: 0.25rem !important;
+            }
+            .modern-pagination .page-item a.page-link:hover {
+                background-color: #f3f4f6 !important;
+                color: #0d6efd !important;
+            }
+            .modern-pagination .page-item.active a.page-link {
+                background-color: #0d6efd !important;
+                color: white !important;
+                box-shadow: 0 0 0 4px #cce5ff !important;
+            }
+            .modern-pagination .page-item.disabled span.page-link,
+            .modern-pagination .page-item.disabled a.page-link {
+                color: #9ca3af !important;
+                background: transparent !important;
+                pointer-events: none !important;
+            }
+            
+            /* Hide default dropdown arrow but keep clickability */
+            .per-page-select {
+                appearance: none !important;
+                -webkit-appearance: none !important;
+                -moz-appearance: none !important;
+                background-image: none !important;
+                cursor: pointer;
+                text-decoration: underline;
+                text-underline-offset: 4px;
+                text-decoration-thickness: 2px;
+                text-decoration-color: #cbd5e1;
+            }
+            .per-page-select:hover {
+                color: #0d6efd !important;
+                text-decoration-color: #0d6efd;
+            }
+            
+            @media (min-width: 992px) {
+                .pagination-wrapper {
+                    position: relative;
+                }
+                .pagination-results-text {
+                    position: absolute;
+                    right: 0;
+                    top: 50%;
+                    transform: translateY(-50%);
+                }
+            }
+        </style>
+        <div class="pagination-wrapper d-flex flex-column flex-lg-row justify-content-center align-items-center mt-5 mb-4 pt-4 border-top gap-3">
             
             {# Modern Pagination UI #}
-            {% if total_pages > 1 %}
             <nav aria-label="Book pagination">
-                <ul class="modern-pagination mb-3 mb-md-0">
+                {% if total_pages > 1 %}
+                <ul class="modern-pagination mb-0">
                     {# Previous Button #}
                     <li class="page-item {% if page == 1 %}disabled{% endif %}">
                         <a class="page-link" href="{{ action_url }}?page={{ page - 1 }}&genre={{ current_filters.current_genre_filter }}&search={{ current_filters.current_search_term }}&sort_by={{ current_filters.current_sort_by }}&sort_order={{ current_filters.current_sort_order }}&per_page={{ current_filters.current_per_page }}" tabindex="-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left me-1" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/></svg> Previous
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/></svg> <span class="d-none d-sm-inline ms-1">Previous</span>
                         </a>
                     </li>
                     
                     {# Page Numbers Wrapper Pattern #}
                     {% for p in range(1, total_pages + 1) %}
-                        {% if p == 1 or p == total_pages or (p >= page - 1 and p <= page + 1) %}
+                        {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
                             <li class="page-item {% if p == page %}active{% endif %}">
                                 <a class="page-link" href="{{ action_url }}?page={{ p }}&genre={{ current_filters.current_genre_filter }}&search={{ current_filters.current_search_term }}&sort_by={{ current_filters.current_sort_by }}&sort_order={{ current_filters.current_sort_order }}&per_page={{ current_filters.current_per_page }}">{{ p }}</a>
                             </li>
-                        {% elif p == page - 2 or p == page + 2 %}
-                            <li class="page-item disabled"><span class="page-link border-0 bg-transparent">...</span></li>
+                        {% elif p == page - 3 or p == page + 3 %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
                         {% endif %}
                     {% endfor %}
                     
                     {# Next Button #}
                     <li class="page-item {% if page == total_pages %}disabled{% endif %}">
                         <a class="page-link" href="{{ action_url }}?page={{ page + 1 }}&genre={{ current_filters.current_genre_filter }}&search={{ current_filters.current_search_term }}&sort_by={{ current_filters.current_sort_by }}&sort_order={{ current_filters.current_sort_order }}&per_page={{ current_filters.current_per_page }}">
-                            Next <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right ms-1" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/></svg>
+                            <span class="d-none d-sm-inline me-1">Next</span> <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/></svg>
                         </a>
                     </li>
                 </ul>
+                {% else %}
+                <div class="d-none d-lg-block"></div>
+                {% endif %}
             </nav>
-            {% else %}
-            <div></div> {# Spacer #}
-            {% endif %}
 
             {# Per Page Selection and Total count #}
-            <div class="pagination-info d-flex align-items-center text-muted small fw-medium mt-3 mt-md-0">
+            <div class="pagination-results-text d-flex align-items-center text-muted small fw-medium mt-3 mt-lg-0">
                 <form method="GET" action="{{ action_url }}" class="d-inline-flex align-items-center m-0">
                     <input type="hidden" name="search" value="{{ current_filters.current_search_term }}">
                     <input type="hidden" name="genre" value="{{ current_filters.current_genre_filter }}">
                     <input type="hidden" name="sort_by" value="{{ current_filters.current_sort_by }}">
                     <input type="hidden" name="sort_order" value="{{ current_filters.current_sort_order }}">
                     
-                    <span class="me-2 text-nowrap">Showing</span>
-                    <select class="form-select form-select-sm border-0 border-bottom bg-transparent fw-semibold text-primary py-0 px-1 mx-1" style="width: auto; cursor: pointer; box-shadow: none;" name="per_page" onchange="this.form.submit()">
+                    <span class="text-nowrap text-secondary">Showing</span>
+                    <select class="form-select border-0 bg-transparent fw-bold text-dark p-0 mx-2 shadow-none per-page-select text-center" style="width: 28px;" name="per_page" onchange="this.form.submit()">
                         <option value="12" {% if current_filters.current_per_page == 12 %}selected{% endif %}>12</option>
                         <option value="25" {% if current_filters.current_per_page == 25 %}selected{% endif %}>25</option>
                         <option value="50" {% if current_filters.current_per_page == 50 %}selected{% endif %}>50</option>
                         <option value="100" {% if current_filters.current_per_page == 100 %}selected{% endif %}>100</option>
                     </select>
-                    <span class="ms-1 text-nowrap">of {{ "{:,}".format(total_count) }} results</span>
+                    <span class="text-nowrap text-secondary">of <span class="fw-semibold text-dark">{{ "{:,}".format(total_count) }}</span> results</span>
                 </form>
             </div>
         </div>
