@@ -1,5 +1,6 @@
 # cs492_bookstore_project/app/main/routes.py
 from flask import render_template, redirect, url_for, flash, current_app, request
+import math
 from flask_login import login_required, current_user
 from typing import List, Dict, Any # For type hinting
 
@@ -43,6 +44,8 @@ def _get_book_display_params_from_request() -> Dict[str, Any]:
     if sort_order not in ['asc', 'desc']:
         sort_order = 'asc' # Default to ascending if invalid value
 
+    per_page = request.args.get('per_page', 25, type=int)
+
     return {
         "genre_filter": genre_filter if genre_filter != 'all' else None, # Pass None if 'all'
         "search_term": search_term,
@@ -52,7 +55,8 @@ def _get_book_display_params_from_request() -> Dict[str, Any]:
         "current_genre_filter": genre_filter, 
         "current_search_term": search_term,
         "current_sort_by": sort_by,
-        "current_sort_order": sort_order
+        "current_sort_order": sort_order,
+        "current_per_page": per_page
     }
 
 @main_bp.route("/")
@@ -78,26 +82,35 @@ def home():
     display_params = _get_book_display_params_from_request()
     logger.info(f"Route: Home page requested by {requester_context} with params: {display_params}")
 
-    books_objects: List[Book] = [] # List of Book objects
+    page = request.args.get('page', 1, type=int)
+    per_page = display_params.get("current_per_page", 25)
+
     books_for_template: List[Dict[str, Any]] = [] # List of dictionaries for JSON
     genres: List[str] = []
+    total_pages = 1
+
     try:
-        books_objects = get_all_books(
+        pagination_data = get_all_books(
             genre_filter=display_params["genre_filter"],
             search_term=display_params["search_term"],
             sort_by=display_params["sort_by"],
-            sort_order=display_params["sort_order"]
+            sort_order=display_params["sort_order"],
+            page=page,
+            per_page=per_page
         )
+        books_objects = pagination_data.get('books', [])
+        total_count = pagination_data.get('total_count', 0)
+        total_pages = math.ceil(total_count / per_page) if total_count > 0 else 1
+
         # Convert Book objects to dictionaries for the template/JSON
         for book_obj in books_objects:
             if hasattr(book_obj, 'to_dict') and callable(book_obj.to_dict):
                 books_for_template.append(book_obj.to_dict()) 
             else:
-                # Fallback or log error if to_dict is missing, though it should be there
-                logger.warning(f"Book object (ID: {getattr(book_obj, 'book_id', 'N/A')}) missing to_dict method.")
+                logger.warning(f"Book object missing to_dict method.")
 
         genres = get_all_distinct_genres()
-        logger.debug(f"Route: Retrieved {len(books_for_template)} books and {len(genres)} genres for home page.")
+        logger.debug(f"Route: Retrieved {len(books_for_template)} books (Page {page}/{total_pages}) and {len(genres)} genres for home page.")
     except DatabaseError as de:
         logger.error(f"Route: Database error fetching data for home page: {de.log_message}", exc_info=True)
         flash("Could not load book data due to a database issue. Please try again later.", "danger")
@@ -109,7 +122,10 @@ def home():
                            books=books_for_template, # Pass the list of dictionaries
                            genres=genres,
                            current_filters=display_params,
-                           action_url=url_for('main.home')
+                           action_url=url_for('main.home'),
+                           page=page,
+                           total_pages=total_pages,
+                           total_count=total_count
                            )
 
 @main_bp.route('/customer')
@@ -131,25 +147,34 @@ def customer():
     display_params = _get_book_display_params_from_request()
     logger.info(f"Route: Customer dashboard requested by {user_context_log} with params: {display_params}")
 
-    books_objects: List[Book] = []
+    page = request.args.get('page', 1, type=int)
+    per_page = display_params.get("current_per_page", 25)
+
     books_for_template: List[Dict[str, Any]] = []
     genres: List[str] = []
+    total_pages = 1
+
     try:
-        books_objects = get_all_books(
+        pagination_data = get_all_books(
             genre_filter=display_params["genre_filter"],
             search_term=display_params["search_term"],
             sort_by=display_params["sort_by"],
-            sort_order=display_params["sort_order"]
+            sort_order=display_params["sort_order"],
+            page=page,
+            per_page=per_page
         )
+        books_objects = pagination_data.get('books', [])
+        total_count = pagination_data.get('total_count', 0)
+        total_pages = math.ceil(total_count / per_page) if total_count > 0 else 1
+
         for book_obj in books_objects:
             if hasattr(book_obj, 'to_dict') and callable(book_obj.to_dict):
                 books_for_template.append(book_obj.to_dict())
             else:
-                logger.warning(f"Book object (ID: {getattr(book_obj, 'book_id', 'N/A')}) missing to_dict method.")
+                logger.warning(f"Book object missing to_dict method.")
 
         genres = get_all_distinct_genres()
-        logger.debug(f"Route: Retrieved {len(books_for_template)} books and {len(genres)} for customer dashboard ({user_context_log}).")
-    # ... (error handling as before) ...
+        logger.debug(f"Route: Retrieved {len(books_for_template)} books (Page {page}/{total_pages}) and {len(genres)} for customer dashboard ({user_context_log}).")
     except DatabaseError as de:
         logger.error(f"Route: Database error fetching data for home page: {de.log_message}", exc_info=True)
         flash("Could not load book data due to a database issue. Please try again later.", "danger")
@@ -161,7 +186,10 @@ def customer():
                            books=books_for_template, # Pass the list of dictionaries
                            genres=genres,
                            current_filters=display_params,
-                           action_url=url_for('main.customer')
+                           action_url=url_for('main.customer'),
+                           page=page,
+                           total_pages=total_pages,
+                           total_count=total_count
                            ) 
 
 @main_bp.route('/profile')

@@ -14,32 +14,28 @@ def get_all_books(
     genre_filter: Optional[str] = None,
     search_term: Optional[str] = None,
     sort_by: Optional[str] = None,
-    sort_order: Optional[str] = 'asc'
-) -> List[Book]:
+    sort_order: Optional[str] = 'asc',
+    page: int = 1,
+    per_page: int = 12
+) -> dict:
     """
-    Retrieves all books from the database, ordered by title.
-
-    This service function delegates the database query to the `Book.get_all()`
-    static method from the `Book` model. It's expected that `Book.get_all()`
-    returns a list of `Book` instances. This service function provides a consistent
-    interface for fetching all books and includes standardized logging and error handling.
+    Retrieves a paginated list of books from the database.
 
     Returns:
-        List[Book]: A list of `Book` objects. Returns an empty list if no books are
-                    found.
-    
-    Raises:
-        DatabaseError: If an underlying database error occurs during the fetch operation
-                       that is not handled within `Book.get_all()` by returning an empty list.
+        dict: A dictionary containing:
+              - 'books': List[Book]
+              - 'total_count': int
+              - 'page': int
+              - 'per_page': int
     """
     logger.debug(f"Service: get_all_books called with: genre_filter='{genre_filter}', "
-                 f"search_term='{search_term}', sort_by='{sort_by}', sort_order='{sort_order}'")
+                 f"search_term='{search_term}', sort_by='{sort_by}', sort_order='{sort_order}', "
+                 f"page={page}, per_page={per_page}")
 
     params_for_where_clause = []
-    base_query = "SELECT * FROM books" # Book model has 'book_id'
     where_clauses_list = []
 
-    if genre_filter and genre_filter.lower() != 'all': # 'all' or empty means no genre filter
+    if genre_filter and genre_filter.lower() != 'all':
         where_clauses_list.append("LOWER(genre) = LOWER(%s)")
         params_for_where_clause.append(genre_filter)
 
@@ -47,67 +43,58 @@ def get_all_books(
         where_clauses_list.append("(LOWER(title) ILIKE %s OR LOWER(author) ILIKE %s)")
         params_for_where_clause.extend([f"%{search_term.lower()}%", f"%{search_term.lower()}%"])
 
-    full_query = base_query
+    where_sql = ""
     if where_clauses_list:
-        full_query += " WHERE " + " AND ".join(where_clauses_list)
+        where_sql = " WHERE " + " AND ".join(where_clauses_list)
+    
+    count_query = "SELECT COUNT(*) FROM books" + where_sql
+    full_query = "SELECT * FROM books" + where_sql
     
     # --- Sorting Logic ---
     allowed_sort_options = {
         'title': 'title',
         'author': 'author',
         'price': 'price',
-        'newest': 'book_id'  # 'newest' maps to sorting by the 'book_id' column
+        'newest': 'book_id'
     }
     
-    # Determine the actual database column to sort by
-    # Default to 'title' if sort_by is None, empty, or an invalid key.
     db_column_key_to_use = sort_by if sort_by and sort_by in allowed_sort_options else 'title'
     db_sort_column_actual = allowed_sort_options[db_column_key_to_use]
 
-    logger.debug(f"Service (Book Sort): Input sort_by='{sort_by}', "
-                 f"Effective key for map='{db_column_key_to_use}', DB column='{db_sort_column_actual}'")
-    if(sort_by is not None):
-        if(sort_by.lower() == "newest"):
-            if(sort_order.lower() == "asc"):
-                sort_order = "desc"
-            else:
-                sort_order = "asc"
+    if sort_by is not None and sort_by.lower() == "newest":
+        sort_order = "desc" if sort_order.lower() == "asc" else "asc"
 
-    # Validate and determine SQL sort order keyword
-    sort_order_sql_keyword = 'ASC' # Default
+    sort_order_sql_keyword = 'ASC'
     if sort_order and sort_order.lower() == 'desc':
         sort_order_sql_keyword = 'DESC'
-    elif sort_order and sort_order.lower() != 'asc': # Catch invalid sort_order values
-        logger.warning(f"Invalid sort_order '{sort_order}' received for books. Defaulting to 'ASC'.")
-        # sort_order_sql_keyword remains 'ASC'
-
-    logger.debug(f"Service (Book Sort): SQL sort order: '{sort_order_sql_keyword}' (from input: '{sort_order}')")
-    
-
 
     # Add ORDER BY clause
-    order_by_clause = ""
-    # For 'title' and 'author', a secondary sort by book_id ensures stability if primary sort values are the same.
     if db_sort_column_actual in ['title', 'author']:
         order_by_clause = f" ORDER BY {db_sort_column_actual} {sort_order_sql_keyword}, book_id {sort_order_sql_keyword}"
-    else: # For price, book_id (as newest), etc.
-        # Use title ASC as a general secondary tie-breaker for other primary sorts
+    else:
         order_by_clause = f" ORDER BY {db_sort_column_actual} {sort_order_sql_keyword}, title ASC" 
     
     full_query += order_by_clause
-    full_query += ";"
 
-    logger.info(f"Service: Fetching books. Genre: '{genre_filter}', Search: '{search_term}', Sort: '{db_sort_column_actual}' {sort_order_sql_keyword}.")
-    logger.debug(f"Service: Final SQL Query for books: {full_query}")
-    logger.debug(f"Service: Parameters for WHERE clause (books): {tuple(params_for_where_clause) if params_for_where_clause else 'None'}")
+    # --- Pagination Logic ---
+    offset_value = (page - 1) * per_page
+    full_query += " LIMIT %s OFFSET %s;"
+    params_for_fetch = params_for_where_clause + [per_page, offset_value]
 
     book_objects: List[Book] = []
+    total_count = 0
     conn = None
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
+            # 1. Get total count
+            cur.execute(count_query, tuple(params_for_where_clause) if params_for_where_clause else None)
+            count_result = cur.fetchone()
+            if count_result and 'count' in count_result:
+                total_count = count_result['count']
 
-            cur.execute(full_query, tuple(params_for_where_clause) if params_for_where_clause else None)
+            # 2. Get paginated results
+            cur.execute(full_query, tuple(params_for_fetch))
             results_as_dicts = cur.fetchall()
         
         for row_dict in results_as_dicts:
@@ -115,8 +102,13 @@ def get_all_books(
             if book_obj:
                 book_objects.append(book_obj)
         
-        logger.info(f"Service: Successfully retrieved {len(book_objects)} books with applied filters/sort.")
-        return book_objects
+        logger.info(f"Service: Successfully retrieved {len(book_objects)} books (Page {page}). Total: {total_count}")
+        return {
+            'books': book_objects,
+            'total_count': total_count,
+            'page': page,
+            'per_page': per_page
+        }
     except Exception as e:
         logger.error(f"Service: Database error while fetching filtered/sorted books: {e}", exc_info=True)
         raise DatabaseError("Could not retrieve book list due to a database problem.", original_exception=e)
